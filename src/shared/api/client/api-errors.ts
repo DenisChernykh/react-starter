@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { z } from 'zod'
 
+import type { ProblemResponseDto } from '../generated/model'
+
 const problemDocumentSchema = z.object({
   type: z.string(),
   title: z.string(),
@@ -21,6 +23,7 @@ const problemDocumentSchema = z.object({
 })
 
 export type ProblemDocumentLike = z.infer<typeof problemDocumentSchema>
+export type ProblemCode = ProblemResponseDto['code']
 
 export class ApiProblemError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
@@ -108,9 +111,9 @@ export function normalizeApiError<
   )
 }
 
-export function isProblemCode(
+export function isProblemCode<TCode extends ProblemCode>(
   error: unknown,
-  code: string,
-): error is ApiProblemError {
+  code: TCode,
+): error is ApiProblemError<ProblemDocumentLike & { code: TCode }> {
   return error instanceof ApiProblemError && error.code === code
 }
