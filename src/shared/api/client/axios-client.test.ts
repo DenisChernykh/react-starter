@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { server } from '@/shared/lib/testing/server'
+import { server } from '@/shared/lib/testing'
 
 import { ApiProblemError } from './api-errors'
 import { clearCsrfToken } from './csrf-token'

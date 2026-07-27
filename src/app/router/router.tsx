@@ -7,7 +7,7 @@ import {
 import { DashboardPage } from '@/pages/dashboard'
 import { LoginPage } from '@/pages/login'
 
-import { queryClient } from '../providers/query-client'
+import { queryClient } from '../config/query-client'
 import {
   createRedirectAuthenticatedLoader,
   createRequireSessionLoader,

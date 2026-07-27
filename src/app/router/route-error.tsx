@@ -10,7 +10,7 @@ import { clearCurrentSession } from '@/entities/session'
 import { isProblemCode } from '@/shared/api'
 import { ErrorMessage } from '@/shared/ui'
 
-import { queryClient } from '../providers/query-client'
+import { queryClient } from '../config/query-client'
 import { getRouteErrorPresentation } from './route-error-presentation'
 
 function AuthenticationRedirect() {

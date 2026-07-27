@@ -12,7 +12,7 @@ import {
   setCsrfToken,
 } from '@/shared/api'
 
-import { queryClient } from '../providers/query-client'
+import { queryClient } from '../config/query-client'
 import { getRouteErrorPresentation } from './route-error-presentation'
 import { RouteError } from './route-error'
 

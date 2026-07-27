@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { currentSessionQueryKey } from '@/entities/session'
 import { clearCsrfToken, peekCsrfToken, setCsrfToken } from '@/shared/api'
-import { server } from '@/shared/lib/testing/server'
+import { server } from '@/shared/lib/testing'
 
 import { LogoutButton } from './logout-button'
 

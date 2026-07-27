@@ -19,7 +19,9 @@
     "api:sync": "node scripts/openapi/sync-openapi.mjs",
     "api:generate": "orval && prettier --write src/shared/api/generated src/shared/api/generated-zod",
     "api:update": "pnpm api:sync && pnpm api:generate",
-    "api:check": "pnpm api:generate && git diff --exit-code -- openapi/openapi.json src/shared/api/generated src/shared/api/generated-zod"
+    "api:check": "pnpm api:generate && git diff --exit-code -- openapi/openapi.json src/shared/api/generated src/shared/api/generated-zod",
+    "architecture": "steiger ./src",
+    "check": "pnpm api:check && pnpm format:check && pnpm lint && pnpm architecture && pnpm test && pnpm build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",

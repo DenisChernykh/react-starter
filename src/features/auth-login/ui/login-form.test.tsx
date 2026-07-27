@@ -6,7 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { clearCsrfToken, peekCsrfToken } from '@/shared/api'
-import { server } from '@/shared/lib/testing/server'
+import { server } from '@/shared/lib/testing'
 
 import { LoginForm } from './login-form'
 
