@@ -1,0 +1,116 @@
+import axios from 'axios'
+import { z } from 'zod'
+
+const problemDocumentSchema = z.object({
+  type: z.string(),
+  title: z.string(),
+  status: z.number().int().min(400).max(599),
+  detail: z.string(),
+  instance: z.string(),
+  code: z.string(),
+  requestId: z.string(),
+  errors: z
+    .array(
+      z.object({
+        pointer: z.string(),
+        code: z.string(),
+        detail: z.string(),
+      }),
+    )
+    .optional(),
+})
+
+export type ProblemDocumentLike = z.infer<typeof problemDocumentSchema>
+
+export class ApiProblemError<
+  TProblem extends ProblemDocumentLike = ProblemDocumentLike,
+> extends Error {
+  public readonly name = 'ApiProblemError'
+  public readonly problem: TProblem
+  public readonly retryAfterMs: number | null
+
+  public constructor(problem: TProblem, retryAfterMs: number | null) {
+    super(problem.title)
+    this.problem = problem
+    this.retryAfterMs = retryAfterMs
+  }
+
+  public get status() {
+    return this.problem.status
+  }
+
+  public get code() {
+    return this.problem.code
+  }
+
+  public get requestId() {
+    return this.problem.requestId
+  }
+}
+
+export class ApiNetworkError extends Error {
+  public readonly name = 'ApiNetworkError'
+
+  public constructor() {
+    super('The API could not be reached')
+  }
+}
+
+export class ApiProtocolError extends Error {
+  public readonly name = 'ApiProtocolError'
+
+  public constructor() {
+    super('The API returned an invalid error response')
+  }
+}
+
+export type ApiClientError<
+  TProblem extends ProblemDocumentLike = ProblemDocumentLike,
+> = ApiProblemError<TProblem> | ApiNetworkError | ApiProtocolError
+
+function parseRetryAfter(value: unknown, now: number): number | null {
+  if (typeof value !== 'string') return null
+
+  const retryAfter = value.trim()
+  if (/^\d+$/u.test(retryAfter)) {
+    const seconds = Number(retryAfter)
+    return Number.isSafeInteger(seconds) ? seconds * 1_000 : null
+  }
+
+  const retryAt = Date.parse(retryAfter)
+  if (Number.isNaN(retryAt) || retryAt <= now) return null
+
+  return retryAt - now
+}
+
+export function normalizeApiError<
+  TProblem extends ProblemDocumentLike = ProblemDocumentLike,
+>(error: unknown, now = Date.now()): ApiClientError<TProblem> {
+  if (!axios.isAxiosError(error)) return new ApiProtocolError()
+  if (error.response === undefined) return new ApiNetworkError()
+
+  const contentType = String(error.response.headers['content-type'] ?? '')
+    .split(';', 1)[0]
+    .trim()
+    .toLowerCase()
+  if (contentType !== 'application/problem+json') {
+    return new ApiProtocolError()
+  }
+
+  const parsed = problemDocumentSchema.safeParse(error.response.data)
+  if (!parsed.success || parsed.data.status !== error.response.status) {
+    return new ApiProtocolError()
+  }
+
+  return new ApiProblemError(
+    parsed.data as TProblem,
+    parseRetryAfter(error.response.headers['retry-after'], now),
+  )
+}
+
+export function isProblemCode(
+  error: unknown,
+  code: string,
+): error is ApiProblemError {
+  return error instanceof ApiProblemError && error.code === code
+}
