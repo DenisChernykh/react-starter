@@ -235,16 +235,16 @@ It must not erase `ErrorData` to an unparameterized common error type.
 Frontend behavior is driven by stable `code`, never by matching `title` or
 `detail` text:
 
-| Condition | First-iteration behavior |
-| --- | --- |
-| `AUTHENTICATION_REQUIRED` | Clear in-memory auth state and redirect to `/login`. |
-| `AUTHORIZATION_DENIED` | Render an access-denied state. |
-| `VALIDATION_FAILED` | Map RFC 6901 pointers to React Hook Form field errors. |
-| `RATE_LIMIT_EXCEEDED` | Render a rate-limit message and retain `Retry-After`. |
-| `DEPENDENCY_UNAVAILABLE` | Render a retryable service-unavailable state. |
-| `INTERNAL_ERROR` | Render a safe generic message with `requestId`. |
-| Network failure | Render a retryable connectivity state. |
-| Invalid problem response | Render a protocol-error state without exposing raw payload data. |
+| Condition                 | First-iteration behavior                                         |
+| ------------------------- | ---------------------------------------------------------------- |
+| `AUTHENTICATION_REQUIRED` | Clear in-memory auth state and redirect to `/login`.             |
+| `AUTHORIZATION_DENIED`    | Render an access-denied state.                                   |
+| `VALIDATION_FAILED`       | Map RFC 6901 pointers to React Hook Form field errors.           |
+| `RATE_LIMIT_EXCEEDED`     | Render a rate-limit message and retain `Retry-After`.            |
+| `DEPENDENCY_UNAVAILABLE`  | Render a retryable service-unavailable state.                    |
+| `INTERNAL_ERROR`          | Render a safe generic message with `requestId`.                  |
+| Network failure           | Render a retryable connectivity state.                           |
+| Invalid problem response  | Render a protocol-error state without exposing raw payload data. |
 
 A failed `/v1/auth/me` request redirects to login only for
 `AUTHENTICATION_REQUIRED`. A `503`, network failure, or protocol failure must
