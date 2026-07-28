@@ -1,4 +1,3 @@
-export { ErrorMessage } from './error-message'
 export { Alert, AlertDescription, AlertTitle } from './alert'
 export { Button, buttonVariants } from './button'
 export { Container } from './container'

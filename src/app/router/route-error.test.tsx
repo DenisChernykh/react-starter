@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -100,5 +101,32 @@ describe('RouteError', () => {
     expect(router.state.location.pathname).toBe('/login')
     expect(peekCsrfToken()).toBeNull()
     expect(queryClient.getQueryData(currentSessionQueryKey())).toBeUndefined()
+  })
+
+  it('revalidates a retryable route through the shared button', async () => {
+    let attempts = 0
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/',
+          loader: () => {
+            attempts += 1
+            if (attempts === 1) throw new ApiNetworkError()
+            return null
+          },
+          element: <p>Recovered route</p>,
+          errorElement: <RouteError />,
+        },
+      ],
+      { initialEntries: ['/'] },
+    )
+
+    render(<RouterProvider router={router} />)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Повторить' }),
+    )
+    expect(await screen.findByText('Recovered route')).toBeVisible()
+    expect(attempts).toBe(2)
   })
 })

@@ -101,6 +101,10 @@ describe('LoginForm', () => {
 
     await user.type(screen.getByLabelText('Email'), 'not-an-email')
     await user.type(screen.getByLabelText('Пароль'), 'secret')
+    const password = screen.getByLabelText('Пароль')
+    await user.click(screen.getByRole('button', { name: 'Показать пароль' }))
+    expect(password).toHaveAttribute('type', 'text')
+    expect(password).toHaveValue('secret')
     await user.click(screen.getByRole('button', { name: 'Войти' }))
 
     expect(await screen.findByText('Неверный email адрес')).toBeVisible()
@@ -191,9 +195,12 @@ describe('LoginForm', () => {
     const user = await fillValidCredentials()
 
     await user.click(screen.getByRole('button', { name: 'Войти' }))
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Входим…' })).toBeDisabled(),
-    )
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Входим' })
+      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('aria-busy', 'true')
+      expect(button.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+    })
     releaseLogin()
     expect(await screen.findByText('Private route')).toBeVisible()
   })
