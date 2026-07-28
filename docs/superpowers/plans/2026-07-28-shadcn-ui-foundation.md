@@ -111,19 +111,21 @@ describe('cn', () => {
 })
 ```
 
-Extend `src/app/styles/tailwind.test.ts` with a raw-source import and a second
-test:
+Extend `src/app/styles/tailwind.test.ts` with a second compiled-output test:
 
 ```ts
-import sourceCss from './index.css?raw'
+const semanticUtilities = ['.border-border', '.bg-background', '.text-primary']
 
-it('contains the shadcn Lyra semantic theme contract', () => {
-  expect(sourceCss).toContain("@import 'shadcn/tailwind.css'")
-  expect(sourceCss).toContain('--background:')
-  expect(sourceCss).toContain('--primary:')
-  expect(sourceCss).toContain('--border:')
+it('compiles the shadcn semantic color utilities for consumers', () => {
+  for (const utility of semanticUtilities) {
+    expect(compiledCss).toContain(utility)
+  }
 })
 ```
+
+The literal utility names make Tailwind scan them from the test module. Before
+the preset defines their tokens, Tailwind cannot emit the corresponding
+compiled rules; after initialization, consumers can use them.
 
 - [ ] **Step 2: Run the focused tests and confirm RED**
 
@@ -423,7 +425,7 @@ describe('Button', () => {
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
     expect(button.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
-    expect(within(button).getByText('Сохранить')).toHaveClass('invisible')
+    expect(within(button).getByText('Сохранить')).not.toBeVisible()
   })
 
   it('keeps an explicitly disabled ordinary button disabled', () => {
