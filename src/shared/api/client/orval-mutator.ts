@@ -1,4 +1,4 @@
-import type { AxiosRequestConfig } from 'axios'
+import { AxiosError, type AxiosRequestConfig, type AxiosResponse } from 'axios'
 
 import {
   type ApiClientError,
@@ -27,6 +27,13 @@ function acceptsOperationalHealthUnavailable(
   )
 }
 
+function getResponseMediaType(response: AxiosResponse<unknown>) {
+  return String(response.headers['content-type'] ?? '')
+    .split(';', 1)[0]
+    .trim()
+    .toLowerCase()
+}
+
 export async function apiMutator<T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig,
@@ -40,6 +47,8 @@ export async function apiMutator<T>(
         ...options?.headers,
       },
     }
+    const acceptsOperationalHealthResponse =
+      requestConfig.validateStatus === undefined
     const response = await API_AXIOS_INSTANCE.request<T>({
       ...requestConfig,
       validateStatus:
@@ -49,6 +58,19 @@ export async function apiMutator<T>(
               acceptsOperationalHealthUnavailable(requestConfig, status)
           : requestConfig.validateStatus,
     })
+    if (
+      acceptsOperationalHealthResponse &&
+      acceptsOperationalHealthUnavailable(requestConfig, response.status) &&
+      getResponseMediaType(response) !== 'application/json'
+    ) {
+      throw new AxiosError(
+        `Request failed with status code ${response.status}`,
+        'ERR_BAD_RESPONSE',
+        response.config,
+        response.request,
+        response,
+      )
+    }
     return response.data
   } catch (error) {
     throw normalizeApiError(error)

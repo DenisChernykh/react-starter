@@ -1,11 +1,9 @@
 import { createBrowserRouter } from 'react-router'
 
-import {
-  clearCurrentSession,
-  currentSessionQueryOptions,
-} from '@/entities/session'
+import { clearCurrentSession, currentSessionQueryKey } from '@/entities/session'
 import { DashboardPage } from '@/pages/dashboard'
 import { LoginPage } from '@/pages/login'
+import { authGetMe } from '@/shared/api'
 
 import { queryClient } from '../config/query-client'
 import {
@@ -14,7 +12,14 @@ import {
 } from './loaders'
 import { RouteError } from './route-error'
 
-const loadSession = () => queryClient.fetchQuery(currentSessionQueryOptions())
+async function loadSession(signal: AbortSignal) {
+  const session = await authGetMe(undefined, signal)
+  if (signal.aborted) {
+    throw new DOMException('The session request was aborted', 'AbortError')
+  }
+  queryClient.setQueryData(currentSessionQueryKey(), session)
+  return session
+}
 
 export const router = createBrowserRouter([
   {

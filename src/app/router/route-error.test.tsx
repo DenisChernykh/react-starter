@@ -10,13 +10,14 @@ import {
   clearCsrfToken,
   peekCsrfToken,
   setCsrfToken,
+  type ProblemCode,
 } from '@/shared/api'
 
 import { queryClient } from '../config/query-client'
 import { getRouteErrorPresentation } from './route-error-presentation'
 import { RouteError } from './route-error'
 
-function problem(status: number, code: string, requestId: string) {
+function problem(status: number, code: ProblemCode, requestId: string) {
   return new ApiProblemError(
     {
       type: 'https://example.test/problem',

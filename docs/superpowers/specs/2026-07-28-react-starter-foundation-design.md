@@ -235,6 +235,10 @@ It must not erase `ErrorData` to an unparameterized common error type.
 Frontend behavior is driven by stable `code`, never by matching `title` or
 `detail` text:
 
+A response is a valid problem document only when its `code` is in the
+generated OpenAPI catalogue. An unknown code is a protocol error rather than a
+new application branch.
+
 | Condition                 | First-iteration behavior                                         |
 | ------------------------- | ---------------------------------------------------------------- |
 | `AUTHENTICATION_REQUIRED` | Clear in-memory auth state and redirect to `/login`.             |
@@ -291,7 +295,11 @@ token in JSON and keeps the session cookie HttpOnly.
 
 1. The protected route loader fetches the generated `/v1/auth/me` query fresh
    before each authentication decision; it does not accept cached session data
-   as proof of a current session.
+   as proof of a current session. It forwards React Router's cancellation
+   signal to that query so an abandoned navigation cannot later clear newer
+   session or CSRF state. The loader does not share an in-flight cache fetch
+   across navigation signals; it writes the completed result to the cache only
+   when its navigation is still active.
 2. A valid user renders the dashboard.
 3. `AUTHENTICATION_REQUIRED` redirects to `/login` while preserving a sanitized
    internal return target.
@@ -375,11 +383,15 @@ Required coverage:
 - Concurrent unsafe requests share one CSRF request.
 - RFC 9457 responses preserve code, status, request ID, and `Retry-After`.
 - Invalid error payloads become protocol errors.
-- Documented `503` JSON bodies for readiness and startup checks resolve as
-  their generated operational response models; unrelated error responses still
-  use RFC 9457 normalization.
+- Documented `application/json` `503` bodies for readiness and startup checks
+  resolve as their generated operational response models;
+  `application/problem+json` at those paths and unrelated error responses use
+  RFC 9457 normalization.
+- Unknown problem codes are protocol errors, not generated error variants.
 - Validation pointers map only to known login fields.
 - The protected route distinguishes `401`, `403`, `503`, and network failure.
+- Aborted route navigation cancels its session request without clearing newer
+  authentication state.
 - Successful login stores CSRF and navigates; logout clears cache and CSRF
   state before navigation.
 - `/login` redirects an already authenticated session.

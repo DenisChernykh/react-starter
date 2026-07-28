@@ -2,14 +2,17 @@ import axios from 'axios'
 import { z } from 'zod'
 
 import type { ProblemResponseDto } from '../generated/model'
+import { AuthGetCsrfToken401Response } from '../generated-zod/auth/auth.zod'
 
+// Orval emits response schemas per operation; this response references the
+// shared ProblemResponseDto contract whose code enum is used by every problem.
 const problemDocumentSchema = z.object({
   type: z.string(),
   title: z.string(),
   status: z.number().int().min(400).max(599),
   detail: z.string(),
   instance: z.string(),
-  code: z.string(),
+  code: AuthGetCsrfToken401Response.shape.code,
   requestId: z.string(),
   errors: z
     .array(

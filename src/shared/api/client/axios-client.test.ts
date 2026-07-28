@@ -152,6 +152,33 @@ describe('credentialed Axios transport', () => {
     await expect(healthStartup()).resolves.toEqual(startup)
   })
 
+  it('normalizes a health problem document instead of returning it as data', async () => {
+    server.use(
+      http.get(`${apiOrigin}/health/ready`, () =>
+        HttpResponse.json(
+          {
+            type: 'https://nest-js-starter.invalid/problems/dependency-unavailable',
+            title: 'Dependency unavailable',
+            status: 503,
+            detail: 'The readiness dependency is unavailable.',
+            instance: 'urn:request:health-problem',
+            code: 'DEPENDENCY_UNAVAILABLE',
+            requestId: 'health-problem',
+          },
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+    )
+
+    await expect(healthReady()).rejects.toMatchObject({
+      code: 'DEPENDENCY_UNAVAILABLE',
+      requestId: 'health-problem',
+    })
+  })
+
   it('preserves an explicit caller validateStatus policy', async () => {
     const unavailable = { status: 'unavailable' }
     server.use(

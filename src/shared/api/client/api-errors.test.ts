@@ -56,6 +56,10 @@ describe('normalizeApiError', () => {
   it.each([
     [problem, 'application/json'],
     [{ ...problem, requestId: undefined }, 'application/problem+json'],
+    [
+      { ...problem, code: 'UNDECLARED_PROBLEM_CODE' },
+      'application/problem+json',
+    ],
   ])('maps an invalid problem response to a protocol error', (data, type) => {
     expect(normalizeApiError(axiosFailure(data, type))).toBeInstanceOf(
       ApiProtocolError,

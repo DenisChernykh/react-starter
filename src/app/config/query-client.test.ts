@@ -4,11 +4,12 @@ import {
   ApiNetworkError,
   ApiProblemError,
   ApiProtocolError,
+  type ProblemCode,
 } from '@/shared/api'
 
 import { shouldRetryQuery } from './query-client'
 
-const problem = (status: number, code: string) =>
+const problem = (status: number, code: ProblemCode) =>
   new ApiProblemError(
     {
       type: 'https://example.test/problem',

@@ -37,8 +37,13 @@
 - Invalidating CSRF state must prevent an older in-flight token fetch from
   overwriting newer state or clearing newer request deduplication.
 - The documented JSON `503` responses of `/health/ready` and
-  `/health/startup` resolve as generated operational data. Other `4xx`/`5xx`
-  responses remain RFC 9457-normalized errors.
+  `/health/startup` resolve as generated operational data only with
+  `application/json`. Other `4xx`/`5xx` responses, including
+  `application/problem+json` at those paths, remain RFC 9457-normalized errors.
+- Route loaders pass React Router's cancellation signal to `/v1/auth/me`; an
+  abandoned navigation must not later clear a newer session or CSRF state.
+- A normalized problem `code` must be one of the generated OpenAPI codes;
+  unknown values are protocol errors.
 
 ---
 
@@ -2296,21 +2301,26 @@ Create `src/app/router/router.tsx`:
 ```tsx
 import { createBrowserRouter } from 'react-router'
 
-import {
-  clearCurrentSession,
-  currentSessionQueryOptions,
-} from '@/entities/session'
+import { clearCurrentSession, currentSessionQueryKey } from '@/entities/session'
 import { DashboardPage } from '@/pages/dashboard'
 import { LoginPage } from '@/pages/login'
+import { authGetMe } from '@/shared/api'
 
-import { queryClient } from '../providers/query-client'
+import { queryClient } from '../config/query-client'
 import {
   createRedirectAuthenticatedLoader,
   createRequireSessionLoader,
 } from './loaders'
 import { RouteError } from './route-error'
 
-const loadSession = () => queryClient.fetchQuery(currentSessionQueryOptions())
+async function loadSession(signal: AbortSignal) {
+  const session = await authGetMe(undefined, signal)
+  if (signal.aborted) {
+    throw new DOMException('The session request was aborted', 'AbortError')
+  }
+  queryClient.setQueryData(currentSessionQueryKey(), session)
+  return session
+}
 
 export const router = createBrowserRouter([
   {

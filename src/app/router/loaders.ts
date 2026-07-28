@@ -4,7 +4,7 @@ import { redirect } from 'react-router'
 import { isProblemCode } from '@/shared/api'
 
 type SessionLoaderDependencies = {
-  load: () => Promise<unknown>
+  load: (signal: AbortSignal) => Promise<unknown>
   clear: () => void
 }
 
@@ -14,9 +14,10 @@ export function createRequireSessionLoader({
 }: SessionLoaderDependencies): LoaderFunction {
   return async ({ request }) => {
     try {
-      await load()
+      await load(request.signal)
       return null
     } catch (error) {
+      if (request.signal.aborted) throw error
       if (!isProblemCode(error, 'AUTHENTICATION_REQUIRED')) throw error
       clear()
       const url = new URL(request.url)
@@ -29,12 +30,13 @@ export function createRequireSessionLoader({
 export function createRedirectAuthenticatedLoader({
   load,
 }: Pick<SessionLoaderDependencies, 'load'>): LoaderFunction {
-  return async () => {
+  return async ({ request }) => {
     let authenticated = false
     try {
-      await load()
+      await load(request.signal)
       authenticated = true
     } catch (error) {
+      if (request.signal.aborted) throw error
       if (!isProblemCode(error, 'AUTHENTICATION_REQUIRED')) throw error
     }
     return authenticated ? redirect('/') : null
