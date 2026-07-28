@@ -1,5 +1,11 @@
 import { Eye, EyeOff } from 'lucide-react'
-import { useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import {
+  useCallback,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
 
 import { Field, FieldDescription, FieldError, FieldLabel } from './field'
 import { useFieldA11y } from './field-a11y'
@@ -20,7 +26,8 @@ type PasswordFieldProps = Omit<ComponentProps<'input'>, 'type'> & {
  * Рендерит парольное поле с переключателем видимости и ARIA-связями формы.
  *
  * @remarks Переключатель сохраняет значение и возвращает фокус в input; `ref`
- * передаётся дальше, поэтому компонент совместим с React Hook Form.
+ * передаётся дальше вместе с callback cleanup, поэтому компонент совместим с
+ * React Hook Form.
  */
 export function PasswordField({
   label,
@@ -44,18 +51,36 @@ export function PasswordField({
   const hasDescription = description !== undefined && description !== null
   const hasError = error !== undefined && error !== null
 
-  function setInputRef(node: HTMLInputElement | null) {
-    inputRef.current = node
+  const setInputRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node
 
-    if (typeof ref === 'function') {
-      ref(node)
-      return
-    }
+      if (typeof ref === 'function') {
+        const cleanup = ref(node)
 
-    if (ref !== null && ref !== undefined) {
-      ref.current = node
-    }
-  }
+        return () => {
+          inputRef.current = null
+          if (typeof cleanup === 'function') {
+            cleanup()
+          } else {
+            ref(null)
+          }
+        }
+      }
+
+      if (ref !== null && ref !== undefined) {
+        ref.current = node
+      }
+
+      return () => {
+        inputRef.current = null
+        if (ref !== null && ref !== undefined) {
+          ref.current = null
+        }
+      }
+    },
+    [ref],
+  )
 
   return (
     <Field data-invalid={metadata.isInvalid || undefined}>

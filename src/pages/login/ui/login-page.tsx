@@ -11,7 +11,7 @@ import {
 } from '@/shared/ui'
 
 /**
- * Отображает страницу входа и передаёт в форму маршрут возврата.
+ * Отображает страницу входа с заголовком первого уровня и формой авторизации.
  *
  * @remarks Берёт `returnTo` из query string, но его безопасность проверяет
  * `useLogin` перед навигацией после успешной аутентификации.
@@ -26,7 +26,9 @@ export function LoginPage() {
     >
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Вход</CardTitle>
+          <CardTitle>
+            <h1>Вход</h1>
+          </CardTitle>
           <CardDescription>
             Введите данные учётной записи, чтобы продолжить.
           </CardDescription>

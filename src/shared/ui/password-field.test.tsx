@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { PasswordField } from './password-field'
 
@@ -38,5 +38,22 @@ describe('PasswordField', () => {
       'aria-describedby',
       'external-help password-error password-description',
     )
+  })
+
+  it('keeps a callback ref stable and forwards its React cleanup', () => {
+    const cleanupRef = vi.fn()
+    const inputRef = vi.fn(() => cleanupRef)
+    const { rerender, unmount } = render(
+      <PasswordField ref={inputRef} label="Пароль" />,
+    )
+
+    expect(inputRef).toHaveBeenCalledOnce()
+
+    rerender(<PasswordField ref={inputRef} label="Пароль" />)
+    expect(inputRef).toHaveBeenCalledOnce()
+
+    unmount()
+    expect(cleanupRef).toHaveBeenCalledOnce()
+    expect(inputRef).toHaveBeenCalledOnce()
   })
 })

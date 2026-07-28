@@ -43,7 +43,8 @@ const buttonVariants = cva(
  * Рендерит кнопку registry с индикатором загрузки без изменения её ширины.
  *
  * @remarks При `isLoading` кнопка блокируется, скрывает обычный контент и
- * получает доступное имя из `loadingLabel` или значения `Загрузка`.
+ * получает доступное имя из `loadingLabel` или значения `Загрузка`. Сохраняет
+ * Base UI `render`, `nativeButton` и state-callback для `className`.
  */
 function Button({
   isLoading,
@@ -62,6 +63,12 @@ function Button({
   }) {
   const busy = Boolean(isLoading)
   const accessibleLabel = loadingLabel ?? 'Загрузка'
+  const resolvedClassName = (state: ButtonPrimitive.State) =>
+    cn(
+      buttonVariants({ variant, size }),
+      typeof className === 'function' ? className(state) : className,
+      'relative',
+    )
 
   return (
     <ButtonPrimitive
@@ -70,14 +77,11 @@ function Button({
       aria-busy={busy || undefined}
       aria-label={busy ? accessibleLabel : ariaLabel}
       disabled={disabled || busy}
-      className={cn(buttonVariants({ variant, size, className }), 'relative')}
+      className={resolvedClassName}
     >
       <span
         data-slot="button-content"
-        className={cn(
-          'inline-flex items-center justify-center',
-          busy && 'invisible',
-        )}
+        className={cn('contents', busy && 'invisible')}
       >
         {children}
       </span>
