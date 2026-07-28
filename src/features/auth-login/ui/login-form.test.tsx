@@ -153,7 +153,7 @@ describe('LoginForm', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('stores CSRF, refreshes /me, and navigates to the internal target', async () => {
+  it('navigates after session creation when the following profile request is unavailable', async () => {
     let meRequests = 0
     server.use(
       http.post(`${apiOrigin}/v1/auth/login`, () =>
@@ -161,7 +161,7 @@ describe('LoginForm', () => {
       ),
       http.get(`${apiOrigin}/v1/auth/me`, () => {
         meRequests += 1
-        return HttpResponse.json(currentUser)
+        return problem(503, 'DEPENDENCY_UNAVAILABLE')
       }),
     )
     const { router } = renderLogin('/private')
@@ -172,7 +172,7 @@ describe('LoginForm', () => {
     expect(await screen.findByText('Private route')).toBeVisible()
     expect(router.state.location.pathname).toBe('/private')
     expect(peekCsrfToken()).toBe(loginResponse.csrfToken)
-    expect(meRequests).toBe(1)
+    expect(meRequests).toBe(0)
   })
 
   it('disables submit while login is pending', async () => {

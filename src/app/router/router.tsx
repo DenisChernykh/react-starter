@@ -14,8 +14,7 @@ import {
 } from './loaders'
 import { RouteError } from './route-error'
 
-const loadSession = () =>
-  queryClient.ensureQueryData(currentSessionQueryOptions())
+const loadSession = () => queryClient.fetchQuery(currentSessionQueryOptions())
 
 export const router = createBrowserRouter([
   {

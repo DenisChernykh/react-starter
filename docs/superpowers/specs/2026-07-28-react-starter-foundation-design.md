@@ -279,21 +279,27 @@ Before an unsafe request:
    interceptor;
 4. attach `X-CSRF-Token` to the original unsafe request.
 
+Clearing or replacing CSRF state invalidates every older in-flight fetch. An
+older response may resolve for its original caller, but it must neither replace
+the current token nor remove a newer request's deduplication state.
+
 Login stores the returned token. Logout and authentication loss clear it.
 Axios's cookie-based XSRF helper is not used because the backend returns the
 token in JSON and keeps the session cookie HttpOnly.
 
 ### Session flow
 
-1. The protected route loader asks `QueryClient` for the generated
-   `/v1/auth/me` query.
+1. The protected route loader fetches the generated `/v1/auth/me` query fresh
+   before each authentication decision; it does not accept cached session data
+   as proof of a current session.
 2. A valid user renders the dashboard.
 3. `AUTHENTICATION_REQUIRED` redirects to `/login` while preserving a sanitized
    internal return target.
 4. The login feature submits the generated request type through React Hook Form
    and a generated Zod request schema.
-5. On success, it stores CSRF, refreshes the current-user query, and navigates
-   to the sanitized return target or `/`.
+5. On success, login stores CSRF and navigates to the sanitized return target
+   or `/`; a protected-route loader owns the subsequent fresh `/v1/auth/me`
+   check and its unavailable-service state.
 6. The login route redirects an already authenticated user to `/`.
 7. Logout sends the required CSRF header, clears session cache and CSRF state,
    and navigates to `/login`.
@@ -369,9 +375,13 @@ Required coverage:
 - Concurrent unsafe requests share one CSRF request.
 - RFC 9457 responses preserve code, status, request ID, and `Retry-After`.
 - Invalid error payloads become protocol errors.
+- Documented `503` JSON bodies for readiness and startup checks resolve as
+  their generated operational response models; unrelated error responses still
+  use RFC 9457 normalization.
 - Validation pointers map only to known login fields.
 - The protected route distinguishes `401`, `403`, `503`, and network failure.
-- Successful login and logout update cache, CSRF state, and navigation.
+- Successful login stores CSRF and navigates; logout clears cache and CSRF
+  state before navigation.
 - `/login` redirects an already authenticated session.
 - Tailwind utilities compile without unresolved at-rule warnings.
 

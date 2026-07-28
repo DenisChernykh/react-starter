@@ -5,6 +5,7 @@ import { server } from '@/shared/lib/testing'
 
 import { ApiProblemError } from './api-errors'
 import { clearCsrfToken } from './csrf-token'
+import { healthReady, healthStartup } from '../generated/health/health'
 import { apiMutator } from './orval-mutator'
 
 const apiOrigin = 'http://localhost:3000'
@@ -130,5 +131,40 @@ describe('credentialed Axios transport', () => {
       code: 'DEPENDENCY_UNAVAILABLE',
       requestId: 'request-503',
     })
+  })
+
+  it('returns declared operational health 503 bodies as data', async () => {
+    const readiness = {
+      status: 'unavailable',
+      checks: { postgres: 'down', redis: 'up' },
+    }
+    const startup = { status: 'starting' }
+    server.use(
+      http.get(`${apiOrigin}/health/ready`, () =>
+        HttpResponse.json(readiness, { status: 503 }),
+      ),
+      http.get(`${apiOrigin}/health/startup`, () =>
+        HttpResponse.json(startup, { status: 503 }),
+      ),
+    )
+
+    await expect(healthReady()).resolves.toEqual(readiness)
+    await expect(healthStartup()).resolves.toEqual(startup)
+  })
+
+  it('preserves an explicit caller validateStatus policy', async () => {
+    const unavailable = { status: 'unavailable' }
+    server.use(
+      http.get(`${apiOrigin}/custom-health`, () =>
+        HttpResponse.json(unavailable, { status: 503 }),
+      ),
+    )
+
+    await expect(
+      apiMutator<typeof unavailable>(
+        { url: '/custom-health', method: 'GET' },
+        { validateStatus: null },
+      ),
+    ).resolves.toEqual(unavailable)
   })
 })

@@ -27,6 +27,19 @@
 - Do not implement any item listed under `Deferred after the first iteration` in the approved design.
 - Follow RED → GREEN → REFACTOR for behavioral work and make the commits named in this plan only after the stated verification passes.
 
+## Review amendment (2026-07-28)
+
+- Every authentication decision must fetch `/v1/auth/me` fresh; do not use
+  `ensureQueryData` as proof that a cached session is still valid.
+- A successful `POST /v1/auth/login` is the session commit. Store its CSRF
+  token and navigate; let the protected-route loader own a later `/v1/auth/me`
+  failure so a valid new session is not reported as a failed login.
+- Invalidating CSRF state must prevent an older in-flight token fetch from
+  overwriting newer state or clearing newer request deduplication.
+- The documented JSON `503` responses of `/health/ready` and
+  `/health/startup` resolve as generated operational data. Other `4xx`/`5xx`
+  responses remain RFC 9457-normalized errors.
+
 ---
 
 ## File map
@@ -2297,8 +2310,7 @@ import {
 } from './loaders'
 import { RouteError } from './route-error'
 
-const loadSession = () =>
-  queryClient.ensureQueryData(currentSessionQueryOptions())
+const loadSession = () => queryClient.fetchQuery(currentSessionQueryOptions())
 
 export const router = createBrowserRouter([
   {
@@ -2374,8 +2386,7 @@ git commit -m "feat(router): protect authenticated routes"
 - Produces: `useLogin(returnTo)`.
 - Produces: `LoginForm`.
 - Consumes: generated `authLoginSchema`, `authLogin`, generated
-  request/response types, `setCsrfToken`, `refreshCurrentSession`, and
-  `sanitizeReturnTo`.
+  request/response types, `setCsrfToken`, and `sanitizeReturnTo`.
 
 - [ ] **Step 1: Write failing validation-pointer mapping tests**
 
@@ -2678,7 +2689,7 @@ describe('LoginForm', () => {
     expect(screen.queryByText('Raw detail must stay hidden')).not.toBeInTheDocument()
   })
 
-  it('stores CSRF, refreshes /me, and navigates to the internal target', async () => {
+  it('navigates after session creation when the following profile request is unavailable', async () => {
     let meRequests = 0
     server.use(
       http.post(`${apiOrigin}/v1/auth/login`, () =>
@@ -2686,7 +2697,10 @@ describe('LoginForm', () => {
       ),
       http.get(`${apiOrigin}/v1/auth/me`, () => {
         meRequests += 1
-        return HttpResponse.json(currentUser)
+        return HttpResponse.json(
+          { code: 'DEPENDENCY_UNAVAILABLE' },
+          { status: 503 },
+        )
       }),
     )
     const { router } = renderLogin('/private')
@@ -2697,7 +2711,7 @@ describe('LoginForm', () => {
     expect(await screen.findByText('Private route')).toBeVisible()
     expect(router.state.location.pathname).toBe('/private')
     expect(peekCsrfToken()).toBe(loginResponse.csrfToken)
-    expect(meRequests).toBe(1)
+    expect(meRequests).toBe(0)
   })
 
   it('disables submit while login is pending', async () => {
@@ -2740,34 +2754,19 @@ Expected: FAIL because `use-login.ts` and `login-form.tsx` do not exist.
 Create `src/features/auth-login/model/use-login.ts`:
 
 ```ts
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 
-import { clearCurrentSession, refreshCurrentSession } from '@/entities/session'
-import {
-  authLogin,
-  isProblemCode,
-  setCsrfToken,
-  type LoginRequestDto,
-} from '@/shared/api'
+import { authLogin, setCsrfToken, type LoginRequestDto } from '@/shared/api'
 import { sanitizeReturnTo } from '@/shared/routes'
 
 export function useLogin(returnTo: string | null) {
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return useMutation({
     mutationFn: async (credentials: LoginRequestDto) => {
       const response = await authLogin(credentials)
       setCsrfToken(response.csrfToken)
-      try {
-        await refreshCurrentSession(queryClient)
-      } catch (error) {
-        if (isProblemCode(error, 'AUTHENTICATION_REQUIRED')) {
-          clearCurrentSession(queryClient)
-        }
-        throw error
-      }
       return response
     },
     onSuccess: () => {
