@@ -42,4 +42,21 @@ describe('TextField', () => {
     expect(input).toHaveAttribute('aria-describedby', 'external-help')
     expect(input).not.toHaveAttribute('aria-invalid')
   })
+
+  it('deduplicates caller and generated description ids in a stable order', () => {
+    render(
+      <TextField
+        id="email"
+        label="Email"
+        description="Рабочий адрес"
+        error="Некорректный email"
+        aria-describedby="external-help email-description external-help"
+      />,
+    )
+
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveAttribute(
+      'aria-describedby',
+      'external-help email-description email-error',
+    )
+  })
 })

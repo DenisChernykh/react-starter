@@ -78,7 +78,6 @@ function Button({
           "inline-flex items-center justify-center",
           busy && "invisible"
         )}
-        style={{ visibility: busy ? "hidden" : undefined }}
       >
         {children}
       </span>

@@ -12,7 +12,8 @@ type FieldA11yOptions = Pick<
  * Строит стабильные id и ARIA-связи для проектных form-field композиций.
  *
  * @returns Идентификаторы description/error, итоговый `aria-describedby` и
- * invalid-состояние. Наличие `error` имеет приоритет над переданным
+ * invalid-состояние. Токены caller-provided `aria-describedby` объединяются с
+ * generated id без повторов; наличие `error` имеет приоритет над переданным
  * `aria-invalid`.
  */
 export function useFieldA11y({
@@ -28,9 +29,12 @@ export function useFieldA11y({
   const hasError = error !== undefined && error !== null
   const descriptionId = hasDescription ? `${inputId}-description` : undefined
   const errorId = hasError ? `${inputId}-error` : undefined
-  const describedBy =
-    [externalDescription, descriptionId, errorId].filter(Boolean).join(' ') ||
-    undefined
+  const describedByTokens = [
+    ...(externalDescription?.split(/\s+/).filter(Boolean) ?? []),
+    descriptionId,
+    errorId,
+  ].filter((value): value is string => value !== undefined)
+  const describedBy = [...new Set(describedByTokens)].join(' ') || undefined
   const ariaInvalid = hasError ? true : externalInvalid
   const isInvalid =
     ariaInvalid === true ||

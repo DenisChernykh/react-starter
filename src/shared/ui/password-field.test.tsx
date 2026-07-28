@@ -22,4 +22,21 @@ describe('PasswordField', () => {
     expect(input).toHaveAttribute('type', 'password')
     expect(input).toHaveValue('secret')
   })
+
+  it('deduplicates caller and generated description ids in a stable order', () => {
+    render(
+      <PasswordField
+        id="password"
+        label="Пароль"
+        description="Не менее восьми символов"
+        error="Пароль слишком короткий"
+        aria-describedby="external-help password-error external-help"
+      />,
+    )
+
+    expect(screen.getByLabelText('Пароль')).toHaveAttribute(
+      'aria-describedby',
+      'external-help password-error password-description',
+    )
+  })
 })

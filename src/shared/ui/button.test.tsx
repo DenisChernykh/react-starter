@@ -26,7 +26,9 @@ describe('Button', () => {
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
     expect(button.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
-    expect(within(button).getByText('Сохранить')).not.toBeVisible()
+    const content = within(button).getByText('Сохранить')
+    expect(content).toHaveClass('invisible')
+    expect(content).not.toHaveAttribute('style')
   })
 
   it('keeps an explicitly disabled ordinary button disabled', () => {
