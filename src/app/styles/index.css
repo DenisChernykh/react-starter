@@ -12,8 +12,6 @@
 @layer base {
   :root {
     font-family: var(--font-sans);
-    color: #18181b;
-    background: #fafafa;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
   }

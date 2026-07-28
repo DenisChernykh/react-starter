@@ -15,4 +15,9 @@ describe('Tailwind Vite integration', () => {
       expect(compiledCss).toContain(utility)
     }
   })
+
+  it('does not retain legacy hard-coded page colors', () => {
+    expect(compiledCss).not.toContain('#18181b')
+    expect(compiledCss).not.toContain('#fafafa')
+  })
 })
