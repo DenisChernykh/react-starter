@@ -25,9 +25,22 @@ const problemDocumentSchema = z.object({
     .optional(),
 })
 
+/**
+ * Структурированное тело ошибки API в формате Problem Details.
+ *
+ * @remarks Повторяет проверенный runtime schema, а не доверяет невалидному телу
+ * HTTP-ответа только из-за его статуса.
+ */
 export type ProblemDocumentLike = z.infer<typeof problemDocumentSchema>
+/** Допустимый код ошибки, возвращаемый API. */
 export type ProblemCode = ProblemResponseDto['code']
 
+/**
+ * Ошибка API с проверенным телом Problem Details.
+ *
+ * @remarks Сохраняет server problem, `requestId` и вычисленный `retryAfterMs`,
+ * чтобы UI мог классифицировать ошибку без обращения к Axios response.
+ */
 export class ApiProblemError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
 > extends Error {
@@ -54,6 +67,7 @@ export class ApiProblemError<
   }
 }
 
+/** Ошибка отсутствия сетевого соединения с API без HTTP-ответа. */
 export class ApiNetworkError extends Error {
   public readonly name = 'ApiNetworkError'
 
@@ -62,6 +76,7 @@ export class ApiNetworkError extends Error {
   }
 }
 
+/** Ошибка ответа API, не соответствующего ожидаемому Problem Details контракту. */
 export class ApiProtocolError extends Error {
   public readonly name = 'ApiProtocolError'
 
@@ -70,6 +85,7 @@ export class ApiProtocolError extends Error {
   }
 }
 
+/** Объединение нормализованных ошибок клиентского API для UI-сценариев. */
 export type ApiClientError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
 > = ApiProblemError<TProblem> | ApiNetworkError | ApiProtocolError
@@ -89,6 +105,15 @@ function parseRetryAfter(value: unknown, now: number): number | null {
   return retryAt - now
 }
 
+/**
+ * Преобразует неизвестную ошибку Axios в нормализованную ошибку клиентского API.
+ *
+ * @remarks Сетевой сбой без response становится `ApiNetworkError`. HTTP-ответ
+ * принимается только с `application/problem+json` и валидным runtime schema;
+ * остальные варианты становятся `ApiProtocolError`.
+ *
+ * @returns Ошибку, безопасную для единообразной классификации в UI.
+ */
 export function normalizeApiError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
 >(error: unknown, now = Date.now()): ApiClientError<TProblem> {
@@ -114,6 +139,7 @@ export function normalizeApiError<
   )
 }
 
+/** Проверяет, имеет ли нормализованная ошибка API указанный server code. */
 export function isProblemCode<TCode extends ProblemCode>(
   error: unknown,
   code: TCode,

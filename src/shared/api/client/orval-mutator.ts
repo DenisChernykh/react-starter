@@ -7,10 +7,12 @@ import {
 } from './api-errors'
 import { API_AXIOS_INSTANCE } from './axios-client'
 
+/** Тип нормализованной ошибки для сгенерированного API-клиента. */
 export type ErrorType<ErrorData> = ApiClientError<
   ErrorData & ProblemDocumentLike
 >
 
+/** Тип тела запроса для сгенерированного API-клиента. */
 export type BodyType<BodyData> = BodyData
 
 const operationalHealthPaths = new Set(['/health/ready', '/health/startup'])
@@ -34,6 +36,15 @@ function getResponseMediaType(response: AxiosResponse<unknown>) {
     .toLowerCase()
 }
 
+/**
+ * Выполняет запрос с нормализацией ошибок и обработкой operational health endpoint'ов.
+ *
+ * @remarks Объединяет config и options без потери headers. Для readiness/startup
+ * endpoints принимает JSON-ответ `503` как operational status, а все остальные
+ * ошибки переводит через `normalizeApiError` в единый client contract.
+ *
+ * @returns Данные успешного API-ответа с типом, заданным сгенерированным клиентом.
+ */
 export async function apiMutator<T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig,

@@ -28,6 +28,13 @@ function AuthenticationRedirect() {
   return <p>Перенаправляем на страницу входа…</p>
 }
 
+/**
+ * Отображает ошибку маршрута или перенаправляет неаутентифицированного пользователя на вход.
+ *
+ * @remarks Требует React Router. При `AUTHENTICATION_REQUIRED` очищает session
+ * cache и выполняет replace-навигацию на login; для retryable ошибок вызывает
+ * `revalidator.revalidate()`.
+ */
 export function RouteError() {
   const error = useRouteError()
   const revalidator = useRevalidator()
@@ -41,12 +48,13 @@ export function RouteError() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <section className="max-w-md text-center">
         <ErrorMessage>{presentation.message}</ErrorMessage>
-        {presentation.requestId ? (
-          <p className="mt-2 text-sm text-zinc-600">
-            Код запроса: {presentation.requestId}
-          </p>
-        ) : null}
-        {presentation.retryable ? (
+        {presentation.requestId !== undefined &&
+          presentation.requestId.length > 0 && (
+            <p className="mt-2 text-sm text-zinc-600">
+              Код запроса: {presentation.requestId}
+            </p>
+          )}
+        {presentation.retryable && (
           <button
             type="button"
             onClick={() => revalidator.revalidate()}
@@ -54,7 +62,7 @@ export function RouteError() {
           >
             Повторить
           </button>
-        ) : null}
+        )}
       </section>
     </main>
   )

@@ -4,12 +4,24 @@ import {
   ApiProtocolError,
 } from '@/shared/api'
 
+/**
+ * Данные для отображения ошибки маршрута пользователю.
+ *
+ * @remarks `retryable` управляет доступностью повторной валидации маршрута, а
+ * `requestId` показывается для внутренних ошибок, которые можно передать в поддержку.
+ */
 export type ErrorPresentation = {
   message: string
   requestId?: string
   retryable: boolean
 }
 
+/**
+ * Преобразует ошибку API в безопасное для пользователя представление.
+ *
+ * @returns Локализованное сообщение, идентификатор запроса при наличии и признак
+ * возможности повторить загрузку маршрута.
+ */
 export function getRouteErrorPresentation(error: unknown): ErrorPresentation {
   if (error instanceof ApiNetworkError) {
     return {
