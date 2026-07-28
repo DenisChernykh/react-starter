@@ -56,4 +56,11 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ['**/*.{test,spec}.{ts,tsx}'],
+    rules: {
+      'jsdoc/require-description': 'off',
+      'jsdoc/require-jsdoc': 'off',
+    },
+  },
 ])
