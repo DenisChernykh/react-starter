@@ -30,6 +30,8 @@ export function LoginForm({ returnTo }: LoginFormProps) {
   } = useForm<LoginRequestDto>({
     resolver: zodResolver(authLoginSchema),
   })
+  const emailError = errors.email?.message
+  const passwordError = errors.password?.message
 
   const submit = handleSubmit(async (credentials) => {
     setFormError(null)
@@ -66,9 +68,9 @@ export function LoginForm({ returnTo }: LoginFormProps) {
           className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
           {...register('email')}
         />
-        {errors.email?.message ? (
-          <ErrorMessage id="email-error">{errors.email.message}</ErrorMessage>
-        ) : null}
+        {emailError !== undefined && emailError.length > 0 && (
+          <ErrorMessage id="email-error">{emailError}</ErrorMessage>
+        )}
       </div>
 
       <div>
@@ -82,14 +84,14 @@ export function LoginForm({ returnTo }: LoginFormProps) {
           className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
           {...register('password')}
         />
-        {errors.password?.message ? (
-          <ErrorMessage id="password-error">
-            {errors.password.message}
-          </ErrorMessage>
-        ) : null}
+        {passwordError !== undefined && passwordError.length > 0 && (
+          <ErrorMessage id="password-error">{passwordError}</ErrorMessage>
+        )}
       </div>
 
-      {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+      {formError !== null && formError.length > 0 && (
+        <ErrorMessage>{formError}</ErrorMessage>
+      )}
 
       <button
         type="submit"

@@ -19,9 +19,9 @@ export function LogoutButton() {
       >
         {logout.isPending ? 'Выходим…' : 'Выйти'}
       </button>
-      {visibleFailure ? (
+      {visibleFailure && (
         <ErrorMessage>Не удалось выйти. Повторите попытку.</ErrorMessage>
-      ) : null}
+      )}
     </div>
   )
 }

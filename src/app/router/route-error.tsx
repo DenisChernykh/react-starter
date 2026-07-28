@@ -41,12 +41,13 @@ export function RouteError() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <section className="max-w-md text-center">
         <ErrorMessage>{presentation.message}</ErrorMessage>
-        {presentation.requestId ? (
-          <p className="mt-2 text-sm text-zinc-600">
-            Код запроса: {presentation.requestId}
-          </p>
-        ) : null}
-        {presentation.retryable ? (
+        {presentation.requestId !== undefined &&
+          presentation.requestId.length > 0 && (
+            <p className="mt-2 text-sm text-zinc-600">
+              Код запроса: {presentation.requestId}
+            </p>
+          )}
+        {presentation.retryable && (
           <button
             type="button"
             onClick={() => revalidator.revalidate()}
@@ -54,7 +55,7 @@ export function RouteError() {
           >
             Повторить
           </button>
-        ) : null}
+        )}
       </section>
     </main>
   )
