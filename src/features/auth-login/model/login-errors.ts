@@ -4,6 +4,7 @@ import {
   ApiProtocolError,
 } from '@/shared/api'
 
+/** Поля формы входа, для которых сервер может вернуть ошибку валидации. */
 export type LoginField = 'email' | 'password'
 
 type ValidationProblem = {
@@ -19,6 +20,7 @@ const fieldByPointer: Readonly<Record<string, LoginField>> = {
   '/password': 'password',
 }
 
+/** Сопоставляет ошибки валидации API с полями формы входа. */
 export function mapLoginValidationErrors(problem: ValidationProblem) {
   const result: Partial<Record<LoginField, string>> = {}
   for (const error of problem.errors ?? []) {
@@ -30,6 +32,7 @@ export function mapLoginValidationErrors(problem: ValidationProblem) {
   return result
 }
 
+/** Возвращает понятное пользователю сообщение об ошибке входа. */
 export function getLoginFormError(error: unknown) {
   if (
     error instanceof ApiProblemError &&

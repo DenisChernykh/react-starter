@@ -4,12 +4,14 @@ import {
   ApiProtocolError,
 } from '@/shared/api'
 
+/** Данные для отображения ошибки маршрута пользователю. */
 export type ErrorPresentation = {
   message: string
   requestId?: string
   retryable: boolean
 }
 
+/** Преобразует ошибку API в безопасное для пользователя представление. */
 export function getRouteErrorPresentation(error: unknown): ErrorPresentation {
   if (error instanceof ApiNetworkError) {
     return {

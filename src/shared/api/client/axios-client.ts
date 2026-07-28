@@ -13,6 +13,7 @@ const clientDefaults = {
   withCredentials: true,
 }
 
+/** Настроенный Axios-клиент для запросов к API с CSRF-защитой. */
 export const API_AXIOS_INSTANCE = axios.create(clientDefaults)
 const csrfAxios = axios.create(clientDefaults)
 

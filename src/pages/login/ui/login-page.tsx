@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router'
 
 import { LoginForm } from '@/features/auth-login'
 
+/** Отображает страницу входа и передаёт в форму маршрут возврата. */
 export function LoginPage() {
   const [searchParams] = useSearchParams()
 

@@ -8,22 +8,26 @@ type PendingCsrfToken = {
 
 let pendingCsrfToken: PendingCsrfToken | null = null
 
+/** Возвращает сохранённый CSRF-токен без сетевого запроса. */
 export function peekCsrfToken() {
   return csrfToken
 }
 
+/** Сохраняет CSRF-токен и отменяет ожидание предыдущего запроса. */
 export function setCsrfToken(token: string) {
   csrfGeneration += 1
   csrfToken = token
   pendingCsrfToken = null
 }
 
+/** Удаляет CSRF-токен и отменяет ожидающий запрос токена. */
 export function clearCsrfToken() {
   csrfGeneration += 1
   csrfToken = null
   pendingCsrfToken = null
 }
 
+/** Возвращает сохранённый CSRF-токен или запрашивает его один раз для параллельных вызовов. */
 export async function getOrFetchCsrfToken(
   fetcher: () => Promise<string>,
 ): Promise<string> {

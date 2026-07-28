@@ -3,6 +3,7 @@ import type { PropsWithChildren } from 'react'
 
 import { queryClient } from './query-client'
 
+/** Подключает React Query к дереву приложения. */
 export function AppProvider({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

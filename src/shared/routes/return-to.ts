@@ -1,3 +1,4 @@
+/** Возвращает безопасный внутренний маршрут для перенаправления после входа. */
 export function sanitizeReturnTo(value: string | null | undefined) {
   if (value === undefined || value === null || !value.startsWith('/')) {
     return '/'

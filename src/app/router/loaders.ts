@@ -8,6 +8,7 @@ type SessionLoaderDependencies = {
   clear: () => void
 }
 
+/** Создаёт loader, который допускает к маршруту только аутентифицированного пользователя. */
 export function createRequireSessionLoader({
   load,
   clear,
@@ -27,6 +28,7 @@ export function createRequireSessionLoader({
   }
 }
 
+/** Создаёт loader, который перенаправляет аутентифицированного пользователя с публичного маршрута. */
 export function createRedirectAuthenticatedLoader({
   load,
 }: Pick<SessionLoaderDependencies, 'load'>): LoaderFunction {

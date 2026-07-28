@@ -3,6 +3,7 @@ import { ErrorMessage } from '@/shared/ui'
 
 import { useLogout } from '../model/use-logout'
 
+/** Отображает кнопку выхода и сообщение о неустранимой ошибке выхода. */
 export function LogoutButton() {
   const logout = useLogout()
   const visibleFailure =

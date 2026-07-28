@@ -21,6 +21,7 @@ async function loadSession(signal: AbortSignal) {
   return session
 }
 
+/** Маршрутизатор приложения с защитой приватного дашборда. */
 export const router = createBrowserRouter([
   {
     path: '/',

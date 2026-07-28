@@ -28,6 +28,7 @@ function AuthenticationRedirect() {
   return <p>Перенаправляем на страницу входа…</p>
 }
 
+/** Отображает ошибку маршрута или перенаправляет неаутентифицированного пользователя на вход. */
 export function RouteError() {
   const error = useRouteError()
   const revalidator = useRevalidator()

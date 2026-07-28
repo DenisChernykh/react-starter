@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { authLogin, setCsrfToken, type LoginRequestDto } from '@/shared/api'
 import { sanitizeReturnTo } from '@/shared/routes'
 
+/** Выполняет вход и перенаправляет пользователя на безопасный целевой маршрут. */
 export function useLogin(returnTo: string | null) {
   const navigate = useNavigate()
 

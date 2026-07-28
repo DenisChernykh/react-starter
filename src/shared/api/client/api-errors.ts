@@ -25,9 +25,12 @@ const problemDocumentSchema = z.object({
     .optional(),
 })
 
+/** Структурированное тело ошибки API в формате Problem Details. */
 export type ProblemDocumentLike = z.infer<typeof problemDocumentSchema>
+/** Допустимый код ошибки, возвращаемый API. */
 export type ProblemCode = ProblemResponseDto['code']
 
+/** Ошибка API с проверенным телом Problem Details. */
 export class ApiProblemError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
 > extends Error {
@@ -54,6 +57,7 @@ export class ApiProblemError<
   }
 }
 
+/** Ошибка отсутствия сетевого соединения с API. */
 export class ApiNetworkError extends Error {
   public readonly name = 'ApiNetworkError'
 
@@ -62,6 +66,7 @@ export class ApiNetworkError extends Error {
   }
 }
 
+/** Ошибка некорректного ответа API. */
 export class ApiProtocolError extends Error {
   public readonly name = 'ApiProtocolError'
 
@@ -70,6 +75,7 @@ export class ApiProtocolError extends Error {
   }
 }
 
+/** Объединение нормализованных ошибок клиентского API. */
 export type ApiClientError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
 > = ApiProblemError<TProblem> | ApiNetworkError | ApiProtocolError
@@ -89,6 +95,7 @@ function parseRetryAfter(value: unknown, now: number): number | null {
   return retryAt - now
 }
 
+/** Преобразует неизвестную ошибку Axios в нормализованную ошибку клиентского API. */
 export function normalizeApiError<
   TProblem extends ProblemDocumentLike = ProblemDocumentLike,
 >(error: unknown, now = Date.now()): ApiClientError<TProblem> {
@@ -114,6 +121,7 @@ export function normalizeApiError<
   )
 }
 
+/** Проверяет, имеет ли ошибка API указанный код. */
 export function isProblemCode<TCode extends ProblemCode>(
   error: unknown,
   code: TCode,

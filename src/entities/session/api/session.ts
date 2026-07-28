@@ -6,9 +6,12 @@ import {
   getAuthGetMeQueryOptions,
 } from '@/shared/api'
 
+/** Создаёт ключ кеша текущей пользовательской сессии. */
 export const currentSessionQueryKey = getAuthGetMeQueryKey
+/** Создаёт параметры запроса текущей пользовательской сессии. */
 export const currentSessionQueryOptions = getAuthGetMeQueryOptions
 
+/** Возвращает текущую пользовательскую сессию из React Query. */
 export function useCurrentSession() {
   return useSuspenseQuery({
     ...currentSessionQueryOptions(),

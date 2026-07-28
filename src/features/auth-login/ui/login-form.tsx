@@ -19,6 +19,7 @@ type LoginFormProps = {
   returnTo: string | null
 }
 
+/** Отображает форму входа с обработкой ошибок API и валидации. */
 export function LoginForm({ returnTo }: LoginFormProps) {
   const login = useLogin(returnTo)
   const [formError, setFormError] = useState<string | null>(null)
