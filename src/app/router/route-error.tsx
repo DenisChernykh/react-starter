@@ -28,7 +28,13 @@ function AuthenticationRedirect() {
   return <p>Перенаправляем на страницу входа…</p>
 }
 
-/** Отображает ошибку маршрута или перенаправляет неаутентифицированного пользователя на вход. */
+/**
+ * Отображает ошибку маршрута или перенаправляет неаутентифицированного пользователя на вход.
+ *
+ * @remarks Требует React Router. При `AUTHENTICATION_REQUIRED` очищает session
+ * cache и выполняет replace-навигацию на login; для retryable ошибок вызывает
+ * `revalidator.revalidate()`.
+ */
 export function RouteError() {
   const error = useRouteError()
   const revalidator = useRevalidator()

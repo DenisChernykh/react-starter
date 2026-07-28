@@ -20,7 +20,12 @@ const fieldByPointer: Readonly<Record<string, LoginField>> = {
   '/password': 'password',
 }
 
-/** Сопоставляет ошибки валидации API с полями формы входа. */
+/**
+ * Сопоставляет ошибки валидации API с полями формы входа.
+ *
+ * @remarks Использует первый server error для каждого поддерживаемого pointer и
+ * игнорирует неизвестные поля, чтобы transport details не попали в UI формы.
+ */
 export function mapLoginValidationErrors(problem: ValidationProblem) {
   const result: Partial<Record<LoginField, string>> = {}
   for (const error of problem.errors ?? []) {
@@ -32,7 +37,14 @@ export function mapLoginValidationErrors(problem: ValidationProblem) {
   return result
 }
 
-/** Возвращает понятное пользователю сообщение об ошибке входа. */
+/**
+ * Возвращает понятное пользователю сообщение об ошибке входа.
+ *
+ * @remarks Сохраняет отдельные сообщения для auth, rate limit, сети и protocol
+ * errors. Для неизвестной problem response добавляет `requestId` для диагностики.
+ *
+ * @returns Безопасный для показа пользователю текст ошибки.
+ */
 export function getLoginFormError(error: unknown) {
   if (
     error instanceof ApiProblemError &&

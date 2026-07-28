@@ -16,12 +16,17 @@ const publicEnvSchema = z.object({
 /** Публичные переменные окружения, доступные клиентскому приложению. */
 export type PublicEnv = z.infer<typeof publicEnvSchema>
 
-/** Проверяет и нормализует публичные переменные окружения. */
+/**
+ * Проверяет и нормализует публичные переменные окружения.
+ *
+ * @param input Значения Vite environment variables до runtime-проверки.
+ * @returns Публичную конфигурацию с абсолютным HTTP(S) API URL без завершающего `/`.
+ */
 export function parsePublicEnv(
   input: Record<string, string | boolean | undefined>,
 ): PublicEnv {
   return publicEnvSchema.parse(input)
 }
 
-/** Проверенные публичные переменные окружения приложения. */
+/** Проверенные публичные переменные окружения, созданные при запуске приложения. */
 export const publicEnv = parsePublicEnv(import.meta.env)

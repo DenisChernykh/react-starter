@@ -21,7 +21,13 @@ async function loadSession(signal: AbortSignal) {
   return session
 }
 
-/** Маршрутизатор приложения с защитой приватного дашборда. */
+/**
+ * Маршрутизатор приложения с защитой приватного дашборда.
+ *
+ * @remarks Loader сохраняет успешно загруженную сессию в React Query cache.
+ * Маршрут `/` требует сессию, а `/login` перенаправляет уже аутентифицированного
+ * пользователя на дашборд.
+ */
 export const router = createBrowserRouter([
   {
     path: '/',

@@ -19,7 +19,13 @@ type LoginFormProps = {
   returnTo: string | null
 }
 
-/** Отображает форму входа с обработкой ошибок API и валидации. */
+/**
+ * Отображает форму входа с обработкой ошибок API и валидации.
+ *
+ * @remarks Использует React Hook Form и Zod для клиентской проверки. Ошибки
+ * `VALIDATION_FAILED` сопоставляет с полями формы, остальные показывает как общую
+ * ошибку mutation из `useLogin`.
+ */
 export function LoginForm({ returnTo }: LoginFormProps) {
   const login = useLogin(returnTo)
   const [formError, setFormError] = useState<string | null>(null)

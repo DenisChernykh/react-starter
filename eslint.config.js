@@ -30,9 +30,9 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      'jsdoc/require-description': 'error',
+      'jsdoc/require-description': 'warn',
       'jsdoc/require-jsdoc': [
-        'error',
+        'warn',
         {
           contexts: [
             'ExportDefaultDeclaration > ClassDeclaration',

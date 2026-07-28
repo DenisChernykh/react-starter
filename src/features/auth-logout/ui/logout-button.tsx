@@ -3,7 +3,12 @@ import { ErrorMessage } from '@/shared/ui'
 
 import { useLogout } from '../model/use-logout'
 
-/** Отображает кнопку выхода и сообщение о неустранимой ошибке выхода. */
+/**
+ * Отображает кнопку выхода и сообщение о неустранимой ошибке выхода.
+ *
+ * @remarks Не показывает ошибку `AUTHENTICATION_REQUIRED`: `useLogout` уже
+ * очищает истёкшую сессию и перенаправляет пользователя на login.
+ */
 export function LogoutButton() {
   const logout = useLogout()
   const visibleFailure =

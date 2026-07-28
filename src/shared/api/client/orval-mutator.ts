@@ -36,7 +36,15 @@ function getResponseMediaType(response: AxiosResponse<unknown>) {
     .toLowerCase()
 }
 
-/** Выполняет запрос с нормализацией ошибок и обработкой operational health endpoint'ов. */
+/**
+ * Выполняет запрос с нормализацией ошибок и обработкой operational health endpoint'ов.
+ *
+ * @remarks Объединяет config и options без потери headers. Для readiness/startup
+ * endpoints принимает JSON-ответ `503` как operational status, а все остальные
+ * ошибки переводит через `normalizeApiError` в единый client contract.
+ *
+ * @returns Данные успешного API-ответа с типом, заданным сгенерированным клиентом.
+ */
 export async function apiMutator<T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig,
