@@ -1,3 +1,5 @@
+import '@/shared/config/zod-locale'
+
 export {
   ApiNetworkError,
   ApiProblemError,

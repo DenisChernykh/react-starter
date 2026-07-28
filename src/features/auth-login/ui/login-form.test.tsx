@@ -103,7 +103,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Пароль'), 'secret')
     await user.click(screen.getByRole('button', { name: 'Войти' }))
 
-    expect(await screen.findByRole('alert')).toBeVisible()
+    expect(await screen.findByText('Неверный email адрес')).toBeVisible()
     expect(loginRequests).toBe(0)
   })
 
