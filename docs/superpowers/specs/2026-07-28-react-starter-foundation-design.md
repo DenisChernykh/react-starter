@@ -235,16 +235,20 @@ It must not erase `ErrorData` to an unparameterized common error type.
 Frontend behavior is driven by stable `code`, never by matching `title` or
 `detail` text:
 
-| Condition | First-iteration behavior |
-| --- | --- |
-| `AUTHENTICATION_REQUIRED` | Clear in-memory auth state and redirect to `/login`. |
-| `AUTHORIZATION_DENIED` | Render an access-denied state. |
-| `VALIDATION_FAILED` | Map RFC 6901 pointers to React Hook Form field errors. |
-| `RATE_LIMIT_EXCEEDED` | Render a rate-limit message and retain `Retry-After`. |
-| `DEPENDENCY_UNAVAILABLE` | Render a retryable service-unavailable state. |
-| `INTERNAL_ERROR` | Render a safe generic message with `requestId`. |
-| Network failure | Render a retryable connectivity state. |
-| Invalid problem response | Render a protocol-error state without exposing raw payload data. |
+A response is a valid problem document only when its `code` is in the
+generated OpenAPI catalogue. An unknown code is a protocol error rather than a
+new application branch.
+
+| Condition                 | First-iteration behavior                                         |
+| ------------------------- | ---------------------------------------------------------------- |
+| `AUTHENTICATION_REQUIRED` | Clear in-memory auth state and redirect to `/login`.             |
+| `AUTHORIZATION_DENIED`    | Render an access-denied state.                                   |
+| `VALIDATION_FAILED`       | Map RFC 6901 pointers to React Hook Form field errors.           |
+| `RATE_LIMIT_EXCEEDED`     | Render a rate-limit message and retain `Retry-After`.            |
+| `DEPENDENCY_UNAVAILABLE`  | Render a retryable service-unavailable state.                    |
+| `INTERNAL_ERROR`          | Render a safe generic message with `requestId`.                  |
+| Network failure           | Render a retryable connectivity state.                           |
+| Invalid problem response  | Render a protocol-error state without exposing raw payload data. |
 
 A failed `/v1/auth/me` request redirects to login only for
 `AUTHENTICATION_REQUIRED`. A `503`, network failure, or protocol failure must
@@ -279,21 +283,31 @@ Before an unsafe request:
    interceptor;
 4. attach `X-CSRF-Token` to the original unsafe request.
 
+Clearing or replacing CSRF state invalidates every older in-flight fetch. An
+older response may resolve for its original caller, but it must neither replace
+the current token nor remove a newer request's deduplication state.
+
 Login stores the returned token. Logout and authentication loss clear it.
 Axios's cookie-based XSRF helper is not used because the backend returns the
 token in JSON and keeps the session cookie HttpOnly.
 
 ### Session flow
 
-1. The protected route loader asks `QueryClient` for the generated
-   `/v1/auth/me` query.
+1. The protected route loader fetches the generated `/v1/auth/me` query fresh
+   before each authentication decision; it does not accept cached session data
+   as proof of a current session. It forwards React Router's cancellation
+   signal to that query so an abandoned navigation cannot later clear newer
+   session or CSRF state. The loader does not share an in-flight cache fetch
+   across navigation signals; it writes the completed result to the cache only
+   when its navigation is still active.
 2. A valid user renders the dashboard.
 3. `AUTHENTICATION_REQUIRED` redirects to `/login` while preserving a sanitized
    internal return target.
 4. The login feature submits the generated request type through React Hook Form
    and a generated Zod request schema.
-5. On success, it stores CSRF, refreshes the current-user query, and navigates
-   to the sanitized return target or `/`.
+5. On success, login stores CSRF and navigates to the sanitized return target
+   or `/`; a protected-route loader owns the subsequent fresh `/v1/auth/me`
+   check and its unavailable-service state.
 6. The login route redirects an already authenticated user to `/`.
 7. Logout sends the required CSRF header, clears session cache and CSRF state,
    and navigates to `/login`.
@@ -369,9 +383,17 @@ Required coverage:
 - Concurrent unsafe requests share one CSRF request.
 - RFC 9457 responses preserve code, status, request ID, and `Retry-After`.
 - Invalid error payloads become protocol errors.
+- Documented `application/json` `503` bodies for readiness and startup checks
+  resolve as their generated operational response models;
+  `application/problem+json` at those paths and unrelated error responses use
+  RFC 9457 normalization.
+- Unknown problem codes are protocol errors, not generated error variants.
 - Validation pointers map only to known login fields.
 - The protected route distinguishes `401`, `403`, `503`, and network failure.
-- Successful login and logout update cache, CSRF state, and navigation.
+- Aborted route navigation cancels its session request without clearing newer
+  authentication state.
+- Successful login stores CSRF and navigates; logout clears cache and CSRF
+  state before navigation.
 - `/login` redirects an already authenticated session.
 - Tailwind utilities compile without unresolved at-rule warnings.
 

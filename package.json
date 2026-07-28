@@ -3,24 +3,45 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.15.1",
+  "engines": {
+    "node": "24.18.0",
+    "pnpm": "11.15.1"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "api:sync": "node scripts/openapi/sync-openapi.mjs",
+    "api:generate": "orval && prettier --write src/shared/api/generated src/shared/api/generated-zod",
+    "api:update": "pnpm api:sync && pnpm api:generate",
+    "api:check": "pnpm api:generate && git diff --exit-code -- openapi/openapi.json src/shared/api/generated src/shared/api/generated-zod",
+    "architecture": "steiger ./src",
+    "check": "pnpm api:check && pnpm format:check && pnpm lint && pnpm architecture && pnpm test && pnpm build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.101.4",
+    "axios": "1.18.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-hook-form": "^7.83.0",
+    "react-router": "8.3.0",
     "tailwindcss": "^4.3.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@feature-sliced/steiger-plugin": "0.7.0",
+    "@tanstack/eslint-plugin-query": "5.101.4",
+    "@testing-library/jest-dom": "7.0.0",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -29,8 +50,15 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "jsdom": "29.1.1",
+    "msw": "2.15.0",
+    "orval": "8.23.0",
+    "prettier": "3.9.6",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "steiger": "0.6.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.62.0",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "4.1.10"
   }
 }

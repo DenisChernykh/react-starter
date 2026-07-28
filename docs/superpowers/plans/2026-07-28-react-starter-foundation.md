@@ -27,6 +27,24 @@
 - Do not implement any item listed under `Deferred after the first iteration` in the approved design.
 - Follow RED → GREEN → REFACTOR for behavioral work and make the commits named in this plan only after the stated verification passes.
 
+## Review amendment (2026-07-28)
+
+- Every authentication decision must fetch `/v1/auth/me` fresh; do not use
+  `ensureQueryData` as proof that a cached session is still valid.
+- A successful `POST /v1/auth/login` is the session commit. Store its CSRF
+  token and navigate; let the protected-route loader own a later `/v1/auth/me`
+  failure so a valid new session is not reported as a failed login.
+- Invalidating CSRF state must prevent an older in-flight token fetch from
+  overwriting newer state or clearing newer request deduplication.
+- The documented JSON `503` responses of `/health/ready` and
+  `/health/startup` resolve as generated operational data only with
+  `application/json`. Other `4xx`/`5xx` responses, including
+  `application/problem+json` at those paths, remain RFC 9457-normalized errors.
+- Route loaders pass React Router's cancellation signal to `/v1/auth/me`; an
+  abandoned navigation must not later clear a newer session or CSRF state.
+- A normalized problem `code` must be one of the generated OpenAPI codes;
+  unknown values are protocol errors.
+
 ---
 
 ## File map
@@ -134,6 +152,7 @@ src/assets/vite.svg
 ### Task 1: Toolchain, Tailwind, formatting, and test harness
 
 **Files:**
+
 - Create: `.nvmrc`
 - Create: `.env.example`
 - Create: `.prettierrc.json`
@@ -152,6 +171,7 @@ src/assets/vite.svg
 - Modify: `src/main.tsx`
 
 **Interfaces:**
+
 - Produces: `parsePublicEnv(input): PublicEnv` and `publicEnv.VITE_API_BASE_URL`.
 - Produces: the `@/*` → `src/*` import alias.
 - Produces: a jsdom Vitest environment with jest-dom matchers.
@@ -301,7 +321,7 @@ export type { PublicEnv } from './env'
 Create `src/app/styles/index.css`:
 
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -495,12 +515,14 @@ git commit -m "build: configure frontend toolchain"
 ### Task 2: OpenAPI synchronization and committed snapshot
 
 **Files:**
+
 - Create: `scripts/openapi/sync-openapi.mjs`
 - Create: `scripts/openapi/sync-openapi.test.mjs`
 - Create: `openapi/openapi.json` through the sync command
 - Modify: `package.json`
 
 **Interfaces:**
+
 - Produces: `validateOpenApiDocument(value): object`.
 - Produces: `readOpenApiSource(source): Promise<string>` for local paths, `file:` URLs, and HTTP(S) URLs.
 - Produces: `syncOpenApi({ source, destination }): Promise<void>`.
@@ -518,10 +540,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import {
-  syncOpenApi,
-  validateOpenApiDocument,
-} from './sync-openapi.mjs'
+import { syncOpenApi, validateOpenApiDocument } from './sync-openapi.mjs'
 
 const authPaths = {
   '/v1/auth/login': { post: { operationId: 'authLogin' } },
@@ -542,9 +561,9 @@ describe('OpenAPI synchronization', () => {
     const paths = { ...authPaths }
     delete paths['/v1/auth/csrf']
 
-    expect(() =>
-      validateOpenApiDocument({ openapi: '3.0.3', paths }),
-    ).toThrow('/v1/auth/csrf')
+    expect(() => validateOpenApiDocument({ openapi: '3.0.3', paths })).toThrow(
+      '/v1/auth/csrf',
+    )
   })
 
   it('writes the source bytes with one normalized trailing newline', async () => {
@@ -606,7 +625,9 @@ export function validateOpenApiDocument(value) {
 
   for (const [path, method] of requiredOperations) {
     if (value.paths[path]?.[method] === undefined) {
-      throw new Error(`OpenAPI document is missing ${method.toUpperCase()} ${path}`)
+      throw new Error(
+        `OpenAPI document is missing ${method.toUpperCase()} ${path}`,
+      )
     }
   }
 
@@ -710,11 +731,13 @@ git commit -m "build(api): synchronize backend OpenAPI"
 ### Task 3: RFC 9457 error types and normalization
 
 **Files:**
+
 - Create: `src/shared/api/client/api-errors.ts`
 - Create: `src/shared/api/client/api-errors.test.ts`
 - Create: `src/shared/api/index.ts`
 
 **Interfaces:**
+
 - Produces: `ProblemDocumentLike`.
 - Produces: `ApiProblemError<TProblem>`, `ApiNetworkError`, and `ApiProtocolError`.
 - Produces: `normalizeApiError<TProblem>(error, now?): ApiClientError<TProblem>`.
@@ -747,11 +770,7 @@ const problem = {
   requestId: 'request-1',
 }
 
-function axiosFailure(
-  data: unknown,
-  contentType: string,
-  retryAfter?: string,
-) {
+function axiosFailure(data: unknown, contentType: string, retryAfter?: string) {
   return new AxiosError(
     'Request failed',
     'ERR_BAD_RESPONSE',
@@ -883,9 +902,7 @@ export class ApiProtocolError extends Error {
 }
 
 export type ApiClientError<TProblem extends ProblemDocumentLike> =
-  | ApiProblemError<TProblem>
-  | ApiNetworkError
-  | ApiProtocolError
+  ApiProblemError<TProblem> | ApiNetworkError | ApiProtocolError
 ```
 
 Complete `normalizeApiError` with these rules:
@@ -971,10 +988,7 @@ export {
   isProblemCode,
   normalizeApiError,
 } from './client/api-errors'
-export type {
-  ApiClientError,
-  ProblemDocumentLike,
-} from './client/api-errors'
+export type { ApiClientError, ProblemDocumentLike } from './client/api-errors'
 ```
 
 Commit:
@@ -987,6 +1001,7 @@ git commit -m "feat(api): normalize problem responses"
 ### Task 4: Credentialed Axios transport and session-bound CSRF
 
 **Files:**
+
 - Create: `src/shared/api/client/csrf-token.ts`
 - Create: `src/shared/api/client/csrf-token.test.ts`
 - Create: `src/shared/api/client/axios-client.ts`
@@ -998,6 +1013,7 @@ git commit -m "feat(api): normalize problem responses"
 - Modify: `src/shared/api/index.ts`
 
 **Interfaces:**
+
 - Produces: `setCsrfToken(token)`, `clearCsrfToken()`, `peekCsrfToken()`, and `getOrFetchCsrfToken(fetcher)`.
 - Produces: `API_AXIOS_INSTANCE` with `withCredentials: true`.
 - Produces: an internal bare credentialed client used only by CSRF acquisition.
@@ -1215,10 +1231,7 @@ describe('credentialed Axios transport', () => {
     ])
 
     expect(csrfRequests).toBe(1)
-    expect(csrfHeaders).toEqual([
-      'csrf-from-endpoint',
-      'csrf-from-endpoint',
-    ])
+    expect(csrfHeaders).toEqual(['csrf-from-endpoint', 'csrf-from-endpoint'])
     expect(contentTypes).toEqual([
       expect.stringContaining('application/json'),
       expect.stringContaining('application/json'),
@@ -1332,10 +1345,7 @@ API_AXIOS_INSTANCE.interceptors.request.use(async (config) => {
   config.headers.set('Content-Type', 'application/json')
   if (isLoginRequest(config.url)) return config
 
-  config.headers.set(
-    'X-CSRF-Token',
-    await getOrFetchCsrfToken(fetchCsrfToken),
-  )
+  config.headers.set('X-CSRF-Token', await getOrFetchCsrfToken(fetchCsrfToken))
   return config
 })
 ```
@@ -1417,6 +1427,7 @@ git commit -m "feat(auth): add credentialed CSRF transport"
 ### Task 5: Orval React Query, Axios, and Zod generation
 
 **Files:**
+
 - Create: `orval.config.ts`
 - Generate: `src/shared/api/generated/**`
 - Generate: `src/shared/api/generated-zod/**`
@@ -1426,6 +1437,7 @@ git commit -m "feat(auth): add credentialed CSRF transport"
 - Modify: `pnpm-lock.yaml`
 
 **Interfaces:**
+
 - Produces generated operations `authLogin`, `authGetMe`,
   `authGetCsrfToken`, and `authLogout`.
 - Produces generated helpers `getAuthGetMeQueryKey`,
@@ -1619,10 +1631,7 @@ codes.
 Inspect the generated `auth.ts` and verify its auth helpers use:
 
 ```ts
-ErrorType<
-  | ProblemResponseDto
-  | ValidationProblemResponseDto
->
+ErrorType<ProblemResponseDto | ValidationProblemResponseDto>
 ```
 
 The generated code must not collapse operation failures into `ErrorType<unknown>`
@@ -1648,6 +1657,7 @@ git commit -m "build(api): generate OpenAPI clients"
 ### Task 6: Query provider and session entity
 
 **Files:**
+
 - Create: `src/app/providers/query-client.ts`
 - Create: `src/app/providers/query-client.test.ts`
 - Create: `src/app/providers/app-provider.tsx`
@@ -1656,6 +1666,7 @@ git commit -m "build(api): generate OpenAPI clients"
 - Create: `src/entities/session/index.ts`
 
 **Interfaces:**
+
 - Produces: `shouldRetryQuery(failureCount, error): boolean`.
 - Produces: singleton `queryClient`.
 - Produces: `AppProvider`.
@@ -1773,10 +1784,7 @@ export function AppProvider({ children }: PropsWithChildren) {
 Create `src/entities/session/api/session.ts`:
 
 ```ts
-import {
-  getAuthGetMeQueryKey,
-  getAuthGetMeQueryOptions,
-} from '@/shared/api'
+import { getAuthGetMeQueryKey, getAuthGetMeQueryOptions } from '@/shared/api'
 import { useSuspenseQuery } from '@tanstack/react-query'
 
 export const currentSessionQueryKey = getAuthGetMeQueryKey
@@ -1853,6 +1861,7 @@ git commit -m "feat(session): add query-backed session model"
 ### Task 7: Data Router, protected route, and safe route errors
 
 **Files:**
+
 - Create: `src/shared/routes/return-to.ts`
 - Create: `src/shared/routes/return-to.test.ts`
 - Create: `src/shared/routes/index.ts`
@@ -1869,6 +1878,7 @@ git commit -m "feat(session): add query-backed session model"
 - Create: `src/shared/ui/index.ts`
 
 **Interfaces:**
+
 - Produces: `sanitizeReturnTo(value): string`.
 - Produces: `createRequireSessionLoader(dependencies)` and
   `createRedirectAuthenticatedLoader(dependencies)`.
@@ -1906,10 +1916,7 @@ Create `src/app/router/loaders.test.ts` with injected loader dependencies:
 ```ts
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  ApiNetworkError,
-  ApiProblemError,
-} from '@/shared/api'
+import { ApiNetworkError, ApiProblemError } from '@/shared/api'
 
 import { createRequireSessionLoader } from './loaders'
 
@@ -2007,7 +2014,8 @@ Create `src/shared/routes/return-to.ts`:
 
 ```ts
 export function sanitizeReturnTo(value: string | null | undefined) {
-  if (value === undefined || value === null || !value.startsWith('/')) return '/'
+  if (value === undefined || value === null || !value.startsWith('/'))
+    return '/'
   if (value.startsWith('//')) return '/'
 
   const target = new URL(value, 'http://local.invalid')
@@ -2293,22 +2301,26 @@ Create `src/app/router/router.tsx`:
 ```tsx
 import { createBrowserRouter } from 'react-router'
 
-import {
-  clearCurrentSession,
-  currentSessionQueryOptions,
-} from '@/entities/session'
+import { clearCurrentSession, currentSessionQueryKey } from '@/entities/session'
 import { DashboardPage } from '@/pages/dashboard'
 import { LoginPage } from '@/pages/login'
+import { authGetMe } from '@/shared/api'
 
-import { queryClient } from '../providers/query-client'
+import { queryClient } from '../config/query-client'
 import {
   createRedirectAuthenticatedLoader,
   createRequireSessionLoader,
 } from './loaders'
 import { RouteError } from './route-error'
 
-const loadSession = () =>
-  queryClient.ensureQueryData(currentSessionQueryOptions())
+async function loadSession(signal: AbortSignal) {
+  const session = await authGetMe(undefined, signal)
+  if (signal.aborted) {
+    throw new DOMException('The session request was aborted', 'AbortError')
+  }
+  queryClient.setQueryData(currentSessionQueryKey(), session)
+  return session
+}
 
 export const router = createBrowserRouter([
   {
@@ -2368,6 +2380,7 @@ git commit -m "feat(router): protect authenticated routes"
 ### Task 8: Login feature and page
 
 **Files:**
+
 - Create: `src/features/auth-login/model/login-errors.ts`
 - Create: `src/features/auth-login/model/login-errors.test.ts`
 - Create: `src/features/auth-login/model/use-login.ts`
@@ -2378,12 +2391,12 @@ git commit -m "feat(router): protect authenticated routes"
 - Modify: `src/pages/login/index.ts`
 
 **Interfaces:**
+
 - Produces: `mapLoginValidationErrors(problem): Partial<Record<LoginField, string>>`.
 - Produces: `useLogin(returnTo)`.
 - Produces: `LoginForm`.
 - Consumes: generated `authLoginSchema`, `authLogin`, generated
-  request/response types, `setCsrfToken`, `refreshCurrentSession`, and
-  `sanitizeReturnTo`.
+  request/response types, `setCsrfToken`, and `sanitizeReturnTo`.
 
 - [ ] **Step 1: Write failing validation-pointer mapping tests**
 
@@ -2398,10 +2411,7 @@ import {
   ApiProtocolError,
 } from '@/shared/api'
 
-import {
-  getLoginFormError,
-  mapLoginValidationErrors,
-} from './login-errors'
+import { getLoginFormError, mapLoginValidationErrors } from './login-errors'
 
 describe('mapLoginValidationErrors', () => {
   it('maps only known RFC 6901 login pointers', () => {
@@ -2424,14 +2434,8 @@ describe('mapLoginValidationErrors', () => {
   })
 
   it.each([
-    [
-      new ApiNetworkError(),
-      'Не удалось подключиться к серверу.',
-    ],
-    [
-      new ApiProtocolError(),
-      'Сервер вернул некорректный ответ.',
-    ],
+    [new ApiNetworkError(), 'Не удалось подключиться к серверу.'],
+    [new ApiProtocolError(), 'Сервер вернул некорректный ответ.'],
     [
       new ApiProblemError(
         {
@@ -2695,7 +2699,7 @@ describe('LoginForm', () => {
     expect(screen.queryByText('Raw detail must stay hidden')).not.toBeInTheDocument()
   })
 
-  it('stores CSRF, refreshes /me, and navigates to the internal target', async () => {
+  it('navigates after session creation when the following profile request is unavailable', async () => {
     let meRequests = 0
     server.use(
       http.post(`${apiOrigin}/v1/auth/login`, () =>
@@ -2703,7 +2707,10 @@ describe('LoginForm', () => {
       ),
       http.get(`${apiOrigin}/v1/auth/me`, () => {
         meRequests += 1
-        return HttpResponse.json(currentUser)
+        return HttpResponse.json(
+          { code: 'DEPENDENCY_UNAVAILABLE' },
+          { status: 503 },
+        )
       }),
     )
     const { router } = renderLogin('/private')
@@ -2714,7 +2721,7 @@ describe('LoginForm', () => {
     expect(await screen.findByText('Private route')).toBeVisible()
     expect(router.state.location.pathname).toBe('/private')
     expect(peekCsrfToken()).toBe(loginResponse.csrfToken)
-    expect(meRequests).toBe(1)
+    expect(meRequests).toBe(0)
   })
 
   it('disables submit while login is pending', async () => {
@@ -2757,37 +2764,19 @@ Expected: FAIL because `use-login.ts` and `login-form.tsx` do not exist.
 Create `src/features/auth-login/model/use-login.ts`:
 
 ```ts
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 
-import {
-  clearCurrentSession,
-  refreshCurrentSession,
-} from '@/entities/session'
-import {
-  authLogin,
-  isProblemCode,
-  setCsrfToken,
-  type LoginRequestDto,
-} from '@/shared/api'
+import { authLogin, setCsrfToken, type LoginRequestDto } from '@/shared/api'
 import { sanitizeReturnTo } from '@/shared/routes'
 
 export function useLogin(returnTo: string | null) {
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return useMutation({
     mutationFn: async (credentials: LoginRequestDto) => {
       const response = await authLogin(credentials)
       setCsrfToken(response.csrfToken)
-      try {
-        await refreshCurrentSession(queryClient)
-      } catch (error) {
-        if (isProblemCode(error, 'AUTHENTICATION_REQUIRED')) {
-          clearCurrentSession(queryClient)
-        }
-        throw error
-      }
       return response
     },
     onSuccess: () => {
@@ -2964,6 +2953,7 @@ git commit -m "feat(auth): add login flow"
 ### Task 9: Logout and the protected empty dashboard
 
 **Files:**
+
 - Create: `src/features/auth-logout/model/use-logout.ts`
 - Create: `src/features/auth-logout/ui/logout-button.tsx`
 - Create: `src/features/auth-logout/ui/logout-button.test.tsx`
@@ -2973,6 +2963,7 @@ git commit -m "feat(auth): add login flow"
 - Modify: `src/app/entrypoint/index.tsx`
 
 **Interfaces:**
+
 - Produces: `useLogout()` and `LogoutButton`.
 - Produces: final `DashboardPage`.
 - Consumes: generated `authLogout`, `clearCurrentSession`, current route loader
@@ -3248,6 +3239,7 @@ git commit -m "feat(auth): add logout lifecycle"
 ### Task 10: FSD enforcement, aggregate verification, CI, and cleanup
 
 **Files:**
+
 - Create: `steiger.config.ts`
 - Create: `.github/workflows/ci.yml`
 - Modify: `eslint.config.js`
@@ -3261,6 +3253,7 @@ git commit -m "feat(auth): add logout lifecycle"
 - Delete: `src/assets/vite.svg`
 
 **Interfaces:**
+
 - Produces: `pnpm architecture`.
 - Produces: ordered aggregate `pnpm check`.
 - Produces: CI verification of frozen install, generated drift, formatting,

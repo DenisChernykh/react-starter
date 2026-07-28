@@ -65,9 +65,7 @@ docs/superpowers/specs/2026-07-28-react-starter-foundation-design.md
 - Orval mutator обязан сохранить generic error body:
 
 ```ts
-type ErrorType<ErrorData> = ApiClientError<
-  ErrorData & ProblemDocumentLike
->
+type ErrorType<ErrorData> = ApiClientError<ErrorData & ProblemDocumentLike>
 ```
 
 - UI не импортирует generated query hooks напрямую.
