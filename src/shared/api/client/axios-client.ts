@@ -17,8 +17,8 @@ const clientDefaults = {
  * Настроенный Axios-клиент для запросов к API с CSRF-защитой.
  *
  * @remarks Отправляет cookie credentials. Перед небезопасным методом получает
- * CSRF-токен, кроме login request; пустое тело нормализует до строки, чтобы
- * middleware могло безопасно добавить JSON content type.
+ * CSRF-токен, кроме login request; отсутствующее тело нормализует до пустого
+ * JSON-объекта, совместимого со строгим серверным JSON-парсером.
  */
 export const API_AXIOS_INSTANCE = axios.create(clientDefaults)
 const csrfAxios = axios.create(clientDefaults)
@@ -37,7 +37,7 @@ API_AXIOS_INSTANCE.interceptors.request.use(async (config) => {
   if (!unsafeMethods.has(method)) return config
 
   config.headers.set('Content-Type', 'application/json')
-  if (config.data === undefined) config.data = ''
+  if (config.data === undefined) config.data = {}
   if (isLoginRequest(config.url)) return config
 
   config.headers.set('X-CSRF-Token', await getOrFetchCsrfToken(fetchCsrfToken))

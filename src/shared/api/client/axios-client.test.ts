@@ -47,19 +47,21 @@ describe('credentialed Axios transport', () => {
     expect(csrfRequests).toBe(0)
   })
 
-  it('fetches CSRF once and attaches JSON headers to unsafe requests', async () => {
+  it('fetches CSRF once and attaches valid JSON to unsafe requests', async () => {
     let csrfRequests = 0
     const csrfHeaders: Array<string | null> = []
     const contentTypes: Array<string | null> = []
+    const requestBodies: string[] = []
 
     server.use(
       http.get(`${apiOrigin}/v1/auth/csrf`, () => {
         csrfRequests += 1
         return HttpResponse.json({ csrfToken: 'csrf-from-endpoint' })
       }),
-      http.post(`${apiOrigin}/v1/auth/logout`, ({ request }) => {
+      http.post(`${apiOrigin}/v1/auth/logout`, async ({ request }) => {
         csrfHeaders.push(request.headers.get('X-CSRF-Token'))
         contentTypes.push(request.headers.get('Content-Type'))
+        requestBodies.push(await request.text())
         return new HttpResponse(null, { status: 204 })
       }),
     )
@@ -75,6 +77,7 @@ describe('credentialed Axios transport', () => {
       expect.stringContaining('application/json'),
       expect.stringContaining('application/json'),
     ])
+    expect(requestBodies).toEqual(['{}', '{}'])
   })
 
   it('does not fetch or attach CSRF for safe requests', async () => {
