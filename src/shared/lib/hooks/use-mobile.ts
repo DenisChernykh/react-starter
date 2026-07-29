@@ -2,21 +2,20 @@ import * as React from 'react'
 
 const MOBILE_BREAKPOINT = 768
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(() => {
-    return typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT
-  })
+// eslint-disable-next-line jsdoc/require-jsdoc -- Copied Base/Lyra registry hook.
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = (event: MediaQueryListEvent) => {
-      setIsMobile(event.matches)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     mql.addEventListener('change', onChange)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Copied Base/Lyra registry synchronizes browser state on mount.
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     return () => mql.removeEventListener('change', onChange)
   }, [])
 
-  return isMobile
+  return Boolean(isMobile)
 }
-
-export { useIsMobile }

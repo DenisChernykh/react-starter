@@ -38,4 +38,28 @@ describe('TextareaField', () => {
     )
     expect(ref).toHaveBeenCalled()
   })
+
+  it('merges caller and generated descriptions without duplicate ids', () => {
+    render(
+      <>
+        <p id="external-help">Внешняя подсказка</p>
+        <TextareaField
+          id="description"
+          label="Описание"
+          description="Опишите предмет согласования"
+          error="Описание обязательно"
+          aria-describedby="external-help description-description external-help"
+        />
+      </>,
+    )
+
+    const textarea = screen.getByRole('textbox', { name: 'Описание' })
+    expect(textarea).toHaveAttribute(
+      'aria-describedby',
+      'external-help description-description description-error',
+    )
+    expect(textarea).toHaveAccessibleDescription(
+      'Внешняя подсказка Опишите предмет согласования Описание обязательно',
+    )
+  })
 })
