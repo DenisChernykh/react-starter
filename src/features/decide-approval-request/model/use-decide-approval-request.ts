@@ -16,7 +16,8 @@ import {
  *
  * @remarks Требует React Query и React Router providers. После успеха записывает
  * точный DTO сервера в detail-кеш без optimistic изменения статуса. При конфликте
- * или исчезновении запроса инвалидирует и активно перезапрашивает detail, а при
+ * или исчезновении запроса инвалидирует detail; активный query при этом
+ * перезапрашивается общей policy TanStack Query. При
  * `AUTHENTICATION_REQUIRED` запускает route revalidation.
  *
  * @returns Mutation, принимающий generated `DecideApprovalRequestDtoDecision`.
@@ -42,10 +43,6 @@ export function useDecideApprovalRequest(requestId: string) {
       if (requiresRefresh) {
         await queryClient.invalidateQueries({
           queryKey: approvalRequestQueryKey(requestId),
-        })
-        await queryClient.refetchQueries({
-          queryKey: approvalRequestQueryKey(requestId),
-          type: 'active',
         })
       }
     },

@@ -205,7 +205,12 @@ describe('AppShell', () => {
 
     await user.click(screen.getByRole('button', { name: 'Открыть навигацию' }))
 
-    const navigationSheet = await screen.findByRole('dialog')
+    const navigationSheet = await screen.findByRole('dialog', {
+      name: 'Навигация',
+    })
+    expect(navigationSheet).toHaveAccessibleDescription(
+      'Основная навигация приложения.',
+    )
     await user.click(
       within(navigationSheet).getByRole('link', { name: 'Согласование' }),
     )

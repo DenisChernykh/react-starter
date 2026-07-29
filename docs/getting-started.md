@@ -140,11 +140,18 @@ cd "$PROJECT_DIR"
 pwd
 test ! -e .git
 git init -b main
+git add .
 git status --short
 ```
 
 Не запускайте `git init` в `STARTER_DIR`. После этой точки все изменения
 выполняются только в `PROJECT_DIR`.
+
+`git add .` здесь создаёт в index исходную точку сравнения для скопированного
+starter, но ещё не создаёт commit. Благодаря этому последующие `git diff` и
+`api:check` видят изменения существующих файлов до первого commit. В status
+ожидаются строки `A` для source starter; перед первым commit index будет
+обновлён ещё раз.
 
 Remote пока не требуется. Добавляйте его после создания отдельного пустого
 репозитория для нового продукта:
@@ -266,11 +273,27 @@ OPENAPI_SPEC_SOURCE=/absolute/path/to/backend/openapi.json pnpm api:update
 После `api:update` проверьте:
 
 ```bash
+git add -N -- openapi/openapi.json \
+  src/shared/api/generated \
+  src/shared/api/generated-zod
+git status --short -- openapi/openapi.json \
+  src/shared/api/generated \
+  src/shared/api/generated-zod
 git diff -- openapi/openapi.json \
+  src/shared/api/generated \
+  src/shared/api/generated-zod
+git add -- openapi/openapi.json \
   src/shared/api/generated \
   src/shared/api/generated-zod
 pnpm api:check
 ```
+
+`git add -N` добавляет новые generated-файлы в index только как
+`intent-to-add`, поэтому они тоже попадают в review diff и не маскируются как
+untracked. Сначала просмотрите полный API diff, затем обычным `git add`
+зафиксируйте в index принятую generation. После этого `api:check` повторяет
+generation и доказывает, что она не создаёт нового unstaged diff относительно
+принятого результата.
 
 Orval создаёт:
 

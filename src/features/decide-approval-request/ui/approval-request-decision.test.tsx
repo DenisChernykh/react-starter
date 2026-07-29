@@ -552,9 +552,8 @@ describe('ApprovalRequestDecision', () => {
     expect(
       await screen.findByText('Запрос уже обработан. Данные обновлены.'),
     ).toBeVisible()
-    await waitFor(() => expect(detailsRequests).toBeGreaterThanOrEqual(2))
-    expect(detailRequestIds.length).toBeGreaterThanOrEqual(2)
-    expect(new Set(detailRequestIds)).toEqual(new Set([uppercaseRequestId]))
+    await waitFor(() => expect(detailsRequests).toBe(2))
+    expect(detailRequestIds).toEqual([uppercaseRequestId, uppercaseRequestId])
     expect(queryClient.getQueryCache().findAll()).toHaveLength(1)
   })
 
@@ -674,9 +673,8 @@ describe('ApprovalRequestDecision', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Одобрить' }))
 
     expect(await screen.findByText('Запрос недоступен')).toBeVisible()
-    await waitFor(() => expect(detailsRequests).toBeGreaterThanOrEqual(2))
-    expect(detailRequestIds.length).toBeGreaterThanOrEqual(2)
-    expect(new Set(detailRequestIds)).toEqual(new Set([uppercaseRequestId]))
+    await waitFor(() => expect(detailsRequests).toBe(2))
+    expect(detailRequestIds).toEqual([uppercaseRequestId, uppercaseRequestId])
     expect(queryClient.getQueryCache().findAll()).toHaveLength(1)
   })
 

@@ -47,6 +47,14 @@ type SidebarContextProps = {
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
 
+/**
+ * Возвращает состояние и управляющие действия ближайшего sidebar.
+ *
+ * @remarks Хук должен вызываться внутри `SidebarProvider`; вне provider он
+ * выбрасывает ошибку конфигурации.
+ *
+ * @returns Текущее desktop/mobile-состояние и функции управления sidebar.
+ */
 function useSidebar() {
   const context = React.useContext(SidebarContext)
   if (!context) {
@@ -56,6 +64,14 @@ function useSidebar() {
   return context
 }
 
+/**
+ * Предоставляет контекст состояния и базовую раскладку для sidebar.
+ *
+ * @remarks Поддерживает controlled и uncontrolled desktop-состояние, сохраняет
+ * его в cookie `sidebar_state`, управляет отдельным mobile sheet и регистрирует
+ * глобальное сочетание `Cmd/Ctrl+B`. Также подключает `TooltipProvider` для
+ * пунктов свёрнутого меню.
+ */
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -146,6 +162,12 @@ function SidebarProvider({
   )
 }
 
+/**
+ * Рендерит адаптивную боковую панель внутри `SidebarProvider`.
+ *
+ * @remarks На мобильном viewport использует modal sheet, а на desktop
+ * поддерживает варианты `offcanvas`, `icon` и `none`.
+ */
 function Sidebar({
   side = 'left',
   variant = 'sidebar',
@@ -193,8 +215,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>Навигация</SheetTitle>
+            <SheetDescription>Основная навигация приложения.</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -246,6 +268,12 @@ function Sidebar({
   )
 }
 
+/**
+ * Рендерит кнопку, переключающую desktop sidebar или mobile sheet.
+ *
+ * @remarks Требует `SidebarProvider`; перед переключением вызывает переданный
+ * обработчик `onClick`.
+ */
 function SidebarTrigger({
   className,
   onClick,
@@ -272,6 +300,11 @@ function SidebarTrigger({
   )
 }
 
+/**
+ * Рендерит интерактивную границу для сворачивания и раскрытия sidebar.
+ *
+ * @remarks Требует `SidebarProvider`.
+ */
 function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
   const { toggleSidebar } = useSidebar()
 
@@ -297,6 +330,9 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
   )
 }
 
+/**
+ * Рендерит основной `main`-контейнер рядом с sidebar.
+ */
 function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
   return (
     <main
@@ -310,6 +346,9 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
   )
 }
 
+/**
+ * Рендерит поле ввода со стилями sidebar.
+ */
 function SidebarInput({
   className,
   ...props
@@ -324,6 +363,9 @@ function SidebarInput({
   )
 }
 
+/**
+ * Рендерит верхнюю секцию sidebar.
+ */
 function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -335,6 +377,9 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Рендерит нижнюю секцию sidebar.
+ */
 function SidebarFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -346,6 +391,9 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Рендерит разделитель между секциями sidebar.
+ */
 function SidebarSeparator({
   className,
   ...props
@@ -360,6 +408,9 @@ function SidebarSeparator({
   )
 }
 
+/**
+ * Рендерит прокручиваемую область основного содержимого sidebar.
+ */
 function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -374,6 +425,9 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Группирует логически связанную секцию содержимого sidebar.
+ */
 function SidebarGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -385,6 +439,9 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+/**
+ * Рендерит заголовок группы sidebar с поддержкой Base UI `render`.
+ */
 function SidebarGroupLabel({
   className,
   render,
@@ -409,6 +466,9 @@ function SidebarGroupLabel({
   })
 }
 
+/**
+ * Рендерит дополнительное действие в заголовке группы sidebar.
+ */
 function SidebarGroupAction({
   className,
   render,
@@ -433,6 +493,9 @@ function SidebarGroupAction({
   })
 }
 
+/**
+ * Рендерит содержимое группы sidebar.
+ */
 function SidebarGroupContent({
   className,
   ...props
@@ -447,6 +510,9 @@ function SidebarGroupContent({
   )
 }
 
+/**
+ * Рендерит список пунктов меню sidebar.
+ */
 function SidebarMenu({ className, ...props }: React.ComponentProps<'ul'>) {
   return (
     <ul
@@ -458,6 +524,9 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<'ul'>) {
   )
 }
 
+/**
+ * Рендерит контейнер отдельного пункта меню sidebar.
+ */
 function SidebarMenuItem({ className, ...props }: React.ComponentProps<'li'>) {
   return (
     <li
@@ -491,6 +560,13 @@ const sidebarMenuButtonVariants = cva(
   },
 )
 
+/**
+ * Рендерит основное действие пункта меню sidebar.
+ *
+ * @remarks Требует `SidebarProvider`. Поддерживает Base UI `render`, состояние
+ * активного пункта и tooltip, который показывается только у свёрнутого desktop
+ * sidebar.
+ */
 function SidebarMenuButton({
   render,
   isActive = false,
@@ -545,6 +621,9 @@ function SidebarMenuButton({
   )
 }
 
+/**
+ * Рендерит дополнительное действие внутри пункта меню sidebar.
+ */
 function SidebarMenuAction({
   className,
   render,
@@ -575,6 +654,9 @@ function SidebarMenuAction({
   })
 }
 
+/**
+ * Рендерит компактный badge пункта меню sidebar.
+ */
 function SidebarMenuBadge({
   className,
   ...props
@@ -592,6 +674,12 @@ function SidebarMenuBadge({
   )
 }
 
+/**
+ * Рендерит skeleton-заглушку пункта меню sidebar.
+ *
+ * @remarks Ширина текстовой заглушки выбирается один раз при монтировании,
+ * чтобы несколько строк выглядели естественно и не менялись при ререндерах.
+ */
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
@@ -629,6 +717,9 @@ function SidebarMenuSkeleton({
   )
 }
 
+/**
+ * Рендерит вложенный список меню sidebar.
+ */
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<'ul'>) {
   return (
     <ul
@@ -643,6 +734,9 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<'ul'>) {
   )
 }
 
+/**
+ * Рендерит контейнер пункта вложенного меню sidebar.
+ */
 function SidebarMenuSubItem({
   className,
   ...props
@@ -657,6 +751,9 @@ function SidebarMenuSubItem({
   )
 }
 
+/**
+ * Рендерит ссылку вложенного меню sidebar с поддержкой Base UI `render`.
+ */
 function SidebarMenuSubButton({
   render,
   size = 'md',
