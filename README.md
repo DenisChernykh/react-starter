@@ -28,6 +28,20 @@ pnpm api:check  # проверить воспроизводимость generate
 
 Каталоги `src/shared/api/generated` и `src/shared/api/generated-zod` создаются только Orval и не редактируются вручную.
 
+## Эталонный бизнес-модуль
+
+`approval-requests` показывает путь от backend OpenAPI до защищённого UI. Правила
+владения контрактом, FSD и cache описаны в
+[руководстве по подключению бизнес-модуля](docs/architecture/business-modules.md).
+
+После аутентификации доступны пять private routes:
+
+- `/` — обзор;
+- `/approval-requests` — центр действий согласования;
+- `/approval-requests/new` — создание запроса;
+- `/approval-requests/open` — открытие запроса по UUID;
+- `/approval-requests/:requestId` — детали запроса и доступное решение.
+
 ## Проверки
 
 ```bash
