@@ -49,7 +49,7 @@ export function PasswordField({
     error,
   })
   const hasDescription = description !== undefined && description !== null
-  const hasError = error !== undefined && error !== null
+  const hasError = Boolean(error)
 
   const setInputRef = useCallback(
     (node: HTMLInputElement | null) => {

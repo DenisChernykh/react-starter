@@ -148,10 +148,12 @@ function FieldSeparator({
 }: React.ComponentProps<'div'> & {
   children?: React.ReactNode
 }) {
+  const hasContent = Boolean(children)
+
   return (
     <div
       data-slot="field-separator"
-      data-content={!!children}
+      data-content={hasContent}
       className={cn(
         'relative -my-2 h-5 text-xs group-data-[variant=outline]/field-group:-mb-2',
         className,
@@ -159,7 +161,7 @@ function FieldSeparator({
       {...props}
     >
       <Separator className="absolute inset-0 top-1/2" />
-      {children && (
+      {hasContent && (
         <span
           className="relative mx-auto block w-fit bg-background px-2 text-muted-foreground"
           data-slot="field-separator-content"

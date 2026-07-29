@@ -26,7 +26,7 @@ export function useFieldA11y({
   const generatedId = useId()
   const inputId = id ?? generatedId
   const hasDescription = description !== undefined && description !== null
-  const hasError = error !== undefined && error !== null
+  const hasError = Boolean(error)
   const descriptionId = hasDescription ? `${inputId}-description` : undefined
   const errorId = hasError ? `${inputId}-error` : undefined
   const describedByTokens = [

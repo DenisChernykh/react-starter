@@ -59,4 +59,13 @@ describe('TextField', () => {
       'external-help email-description email-error',
     )
   })
+
+  it('does not expose ARIA error metadata for an empty error', () => {
+    render(<TextField id="email" label="Email" error="" />)
+
+    const input = screen.getByRole('textbox', { name: 'Email' })
+    expect(input).not.toHaveAttribute('aria-invalid')
+    expect(input).not.toHaveAttribute('aria-describedby')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

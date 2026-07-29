@@ -33,7 +33,7 @@ export function TextField({
     error,
   })
   const hasDescription = description !== undefined && description !== null
-  const hasError = error !== undefined && error !== null
+  const hasError = Boolean(error)
 
   return (
     <Field data-invalid={metadata.isInvalid || undefined}>
