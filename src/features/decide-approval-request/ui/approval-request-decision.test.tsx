@@ -3,7 +3,15 @@ import {
   QueryClientProvider,
   useQuery,
 } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { useState } from 'react'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -23,6 +31,7 @@ import { ApprovalRequestDecision } from './approval-request-decision'
 const apiOrigin = 'http://localhost:3000'
 const csrfToken = 'C'.repeat(43)
 const requestId = 'c9c6cbca-47e6-4ab0-932e-30f7a0e97184'
+const requestIdB = 'e7df8c6d-d2b2-4c29-b362-02da53b15a78'
 const authorId = '401deac1-f230-4926-961e-d4c3ac510cec'
 const reviewerId = '6a9f79ea-b651-4dc2-870b-c4e9f2da4d58'
 
@@ -49,6 +58,19 @@ const rejectedRequest = {
   status: 'rejected',
   decidedByUserId: reviewerId,
   decidedAt: '2026-07-29T06:30:00.000Z',
+} satisfies ApprovalRequestResponseDto
+
+const pendingRequestB = {
+  ...pendingRequest,
+  id: requestIdB,
+  title: 'Публикация исправления',
+} satisfies ApprovalRequestResponseDto
+
+const approvedRequestB = {
+  ...pendingRequestB,
+  status: 'approved',
+  decidedByUserId: reviewerId,
+  decidedAt: '2026-07-29T06:45:00.000Z',
 } satisfies ApprovalRequestResponseDto
 
 const reviewer = {
@@ -165,6 +187,93 @@ function renderActiveApprovalRequestDetail() {
       {
         path: '/approval-requests/:requestId',
         element: <ApprovalRequestDetailFixture />,
+      },
+    ],
+    { initialEntries: [`/approval-requests/${requestId}`] },
+  )
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
+
+  return { queryClient, router }
+}
+
+function renderMutableApprovalRequestDecision(initialRequest = pendingRequest) {
+  function Fixture() {
+    const [request, setCurrentRequest] =
+      useState<ApprovalRequestResponseDto>(initialRequest)
+
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setCurrentRequest(approvedRequest)}
+        >
+          Показать terminal A
+        </button>
+        <button
+          type="button"
+          onClick={() => setCurrentRequest(approvedRequestB)}
+        >
+          Показать terminal B
+        </button>
+        <ApprovalRequestDecision request={request} currentUser={reviewer} />
+      </>
+    )
+  }
+
+  const queryClient = createQueryClient()
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/approval-requests/:requestId',
+        element: <Fixture />,
+      },
+    ],
+    { initialEntries: [`/approval-requests/${initialRequest.id}`] },
+  )
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
+
+  return { queryClient, router }
+}
+
+function renderMutableActiveApprovalRequestDetail() {
+  function Fixture() {
+    const [request, setCurrentRequest] =
+      useState<ApprovalRequestResponseDto>(pendingRequest)
+    useQuery({
+      queryKey: approvalRequestQueryKey(request.id),
+      queryFn: () => approvalRequestsGet({ requestId: request.id }),
+      retry: false,
+    })
+
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setCurrentRequest(pendingRequestB)}
+        >
+          Перейти к запросу B
+        </button>
+        <ApprovalRequestDecision request={request} currentUser={reviewer} />
+      </>
+    )
+  }
+
+  const queryClient = createQueryClient()
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/approval-requests/:requestId',
+        element: <Fixture />,
       },
     ],
     { initialEntries: [`/approval-requests/${requestId}`] },
@@ -318,6 +427,43 @@ describe('ApprovalRequestDecision', () => {
     releaseRequest()
   })
 
+  it('sends only one PUT when confirmation is clicked twice before the pending rerender', async () => {
+    let putRequests = 0
+    const decisionBodies: unknown[] = []
+    let releaseRequest!: () => void
+    const requestGate = new Promise<void>((resolve) => {
+      releaseRequest = resolve
+    })
+    server.use(
+      csrfHandler(),
+      http.put(
+        `${apiOrigin}/v1/approval-requests/:id/decision`,
+        async ({ request }) => {
+          putRequests += 1
+          decisionBodies.push(await request.json())
+          await requestGate
+          return HttpResponse.json(approvedRequest)
+        },
+      ),
+    )
+    renderApprovalRequestDecision()
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Одобрить' }))
+    const dialog = await screen.findByRole('alertdialog')
+    const confirm = within(dialog).getByRole('button', { name: 'Одобрить' })
+
+    await act(async () => {
+      fireEvent.click(confirm)
+      fireEvent.click(confirm)
+    })
+
+    await waitFor(() => expect(putRequests).toBe(1))
+    expect(decisionBodies).toEqual([{ decision: 'approved' }])
+
+    releaseRequest()
+  })
+
   it('writes the returned server DTO to detail cache and closes the dialog', async () => {
     server.use(
       csrfHandler(),
@@ -368,6 +514,95 @@ describe('ApprovalRequestDecision', () => {
     ).toBeVisible()
     await waitFor(() => expect(detailsRequests).toBeGreaterThanOrEqual(2))
   })
+
+  it('does not transfer a conflict alert from terminal request A to terminal request B', async () => {
+    server.use(
+      csrfHandler(),
+      http.put(`${apiOrigin}/v1/approval-requests/:id/decision`, () =>
+        problem(409, 'APPROVAL_REQUEST_ALREADY_DECIDED'),
+      ),
+    )
+    renderMutableApprovalRequestDecision()
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Одобрить' }))
+    const dialog = await screen.findByRole('alertdialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Одобрить' }))
+
+    fireEvent.click(screen.getByText('Показать terminal A'))
+    expect(
+      await screen.findByText('Запрос уже обработан. Данные обновлены.'),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByText('Показать terminal B'))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+  ] as const)(
+    'keeps late %s refresh scoped to request A after navigation to request B',
+    async (code) => {
+      let requestBGetRequests = 0
+      let releaseRequest!: () => void
+      const requestGate = new Promise<void>((resolve) => {
+        releaseRequest = resolve
+      })
+      server.use(
+        http.get(`${apiOrigin}/v1/approval-requests/:id`, ({ params }) => {
+          if (params.id === requestIdB) {
+            requestBGetRequests += 1
+            return HttpResponse.json(pendingRequestB)
+          }
+          return HttpResponse.json(pendingRequest)
+        }),
+        csrfHandler(),
+        http.put(`${apiOrigin}/v1/approval-requests/:id/decision`, async () => {
+          await requestGate
+          return problem(
+            code === 'APPROVAL_REQUEST_ALREADY_DECIDED' ? 409 : 404,
+            code,
+          )
+        }),
+      )
+      const { queryClient } = renderMutableActiveApprovalRequestDetail()
+      const user = userEvent.setup()
+
+      await waitFor(() => {
+        expect(
+          queryClient.getQueryData(approvalRequestQueryKey(requestId)),
+        ).toEqual(pendingRequest)
+      })
+      await user.click(screen.getByRole('button', { name: 'Одобрить' }))
+      const dialog = await screen.findByRole('alertdialog')
+      await user.click(within(dialog).getByRole('button', { name: 'Одобрить' }))
+
+      fireEvent.click(screen.getByText('Перейти к запросу B'))
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Одобрить' })).toBeVisible()
+      await waitFor(() => {
+        expect(
+          queryClient.getQueryData(approvalRequestQueryKey(requestIdB)),
+        ).toEqual(pendingRequestB)
+      })
+
+      releaseRequest()
+
+      await waitFor(() => {
+        expect(
+          queryClient.getQueryState(approvalRequestQueryKey(requestId))
+            ?.isInvalidated,
+        ).toBe(true)
+      })
+      expect(requestBGetRequests).toBe(1)
+      expect(
+        queryClient.getQueryState(approvalRequestQueryKey(requestIdB))
+          ?.isInvalidated,
+      ).not.toBe(true)
+    },
+  )
 
   it('refreshes active details into the unavailable state when the request disappears', async () => {
     let detailsRequests = 0

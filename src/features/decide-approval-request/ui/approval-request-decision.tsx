@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { getApprovalDecisionAvailability } from '@/entities/approval-request'
 import {
@@ -40,6 +40,9 @@ type DecisionDialogProps = Readonly<{
   request: ApprovalRequestResponseDto
   decision: DecideApprovalRequestDtoDecision
   mutation: ReturnType<typeof useDecideApprovalRequest>
+  confirmDecision: (
+    decision: DecideApprovalRequestDtoDecision,
+  ) => Promise<boolean>
 }>
 
 const decisionCopyByValue: Readonly<
@@ -64,7 +67,12 @@ const decisionCopyByValue: Readonly<
  * фокус к точной кнопке после отмены. Пока mutation pending, игнорирует close,
  * отключает отмену и оставляет диалог открытым после безопасно обработанной ошибки.
  */
-function DecisionDialog({ request, decision, mutation }: DecisionDialogProps) {
+function DecisionDialog({
+  request,
+  decision,
+  mutation,
+  confirmDecision,
+}: DecisionDialogProps) {
   const [open, setOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const copy = decisionCopyByValue[decision]
@@ -82,8 +90,8 @@ function DecisionDialog({ request, decision, mutation }: DecisionDialogProps) {
   const confirm = async () => {
     setErrorMessage(null)
     try {
-      await mutation.mutateAsync(decision)
-      setOpen(false)
+      const confirmed = await confirmDecision(decision)
+      if (confirmed) setOpen(false)
     } catch (error) {
       setErrorMessage(getApprovalDecisionError(error))
     }
@@ -132,17 +140,55 @@ function DecisionDialog({ request, decision, mutation }: DecisionDialogProps) {
 /**
  * Отображает доступные текущему пользователю действия решения по запросу.
  *
- * @remarks Требует React Query и React Router providers. Доступность вычисляется
- * один раз через entity policy; mutation не меняет status optimistically. После
- * terminal-refetch показывает conflict-alert только для предыдущей ошибки
- * `APPROVAL_REQUEST_ALREADY_DECIDED`.
+ * @remarks Требует React Query и React Router providers. Перемонтирует private
+ * body при смене `request.id`, поэтому pending mutation, dialog state и error
+ * одного запроса не влияют на другой. Доступность вычисляется один раз через
+ * entity policy; mutation не меняет status optimistically. После terminal-refetch
+ * показывает conflict-alert только для предыдущей ошибки
+ * `APPROVAL_REQUEST_ALREADY_DECIDED` этого же запроса.
  */
 export function ApprovalRequestDecision({
   request,
   currentUser,
 }: ApprovalRequestDecisionProps) {
+  return (
+    <ApprovalRequestDecisionBody
+      key={request.id}
+      request={request}
+      currentUser={currentUser}
+    />
+  )
+}
+
+/**
+ * Владеет mutation и синхронной блокировкой подтверждения одного запроса.
+ *
+ * @remarks Перемонтируется с ключом `request.id`, чтобы mutation callbacks
+ * сохраняли identity исходного запроса. Один ref разделён между обоими
+ * `DecisionDialog` и блокирует повторный или противоположный confirm до того,
+ * как React Query успеет отрендерить `isPending`.
+ */
+function ApprovalRequestDecisionBody({
+  request,
+  currentUser,
+}: ApprovalRequestDecisionProps) {
   const decisionMutation = useDecideApprovalRequest(request.id)
+  const confirmationLock = useRef(false)
   const availability = getApprovalDecisionAvailability(request, currentUser)
+
+  const confirmDecision = async (
+    decision: DecideApprovalRequestDtoDecision,
+  ) => {
+    if (confirmationLock.current) return false
+
+    confirmationLock.current = true
+    try {
+      await decisionMutation.mutateAsync(decision)
+      return true
+    } finally {
+      confirmationLock.current = false
+    }
+  }
 
   switch (availability) {
     case 'available':
@@ -152,11 +198,13 @@ export function ApprovalRequestDecision({
             request={request}
             decision="approved"
             mutation={decisionMutation}
+            confirmDecision={confirmDecision}
           />
           <DecisionDialog
             request={request}
             decision="rejected"
             mutation={decisionMutation}
+            confirmDecision={confirmDecision}
           />
         </div>
       )
