@@ -39,6 +39,7 @@ describe('OpenApprovalRequestForm', () => {
     await user.click(screen.getByRole('button', { name: 'Открыть запрос' }))
 
     expect(await screen.findByRole('alert')).toBeVisible()
+    expect(await screen.findByText('Неверный UUID')).toBeVisible()
     expect(router.state.location.pathname).toBe('/approval-requests/open')
   })
 
@@ -60,6 +61,7 @@ describe('OpenApprovalRequestForm', () => {
     await user.click(screen.getByRole('button', { name: 'Открыть запрос' }))
 
     expect(await screen.findByRole('alert')).toBeVisible()
+    expect(await screen.findByText('Неверный UUID')).toBeVisible()
     expect(router.state.location.pathname).toBe('/approval-requests/open')
     expect(detailsRequests).toBe(0)
   })
