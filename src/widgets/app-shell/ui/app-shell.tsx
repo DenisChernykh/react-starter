@@ -95,9 +95,7 @@ export function AppShell({ children }: PropsWithChildren): ReactNode {
         <header className="flex h-12 items-center border-b px-4">
           <SidebarTrigger aria-label="Открыть навигацию" />
         </header>
-        <Container as="main" className="flex-1 py-6">
-          {children}
-        </Container>
+        <Container className="flex-1 py-6">{children}</Container>
       </SidebarInset>
     </SidebarProvider>
   )
