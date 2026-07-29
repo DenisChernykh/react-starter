@@ -13,7 +13,7 @@ export {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from './alert-dialog'
-export { Badge, badgeVariants } from './badge'
+export { Badge } from './badge'
 export { Button, buttonVariants } from './button'
 export { Container } from './container'
 export {
