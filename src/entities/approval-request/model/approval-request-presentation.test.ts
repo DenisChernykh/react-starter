@@ -55,6 +55,17 @@ describe('approval request presentation', () => {
     },
   )
 
+  it('prevents one caller from corrupting later status presentations', () => {
+    const presentation = getApprovalRequestStatusPresentation('pending')
+
+    Reflect.set(presentation, 'label', 'Повреждено')
+
+    expect(getApprovalRequestStatusPresentation('pending')).toEqual({
+      label: 'Ожидает решения',
+      variant: 'secondary',
+    })
+  })
+
   it('formats a request date in Russian', () => {
     expect(formatApprovalRequestDate('2026-07-29T06:15:00.000Z', 'UTC')).toBe(
       '29.07.2026, 06:15',
@@ -65,11 +76,11 @@ describe('approval request presentation', () => {
     expect(getApprovalDecisionAvailability(pending, reviewer)).toBe('available')
   })
 
-  it('treats a terminal request as terminal before permissions', () => {
+  it('treats a terminal request as terminal before ownership and permissions', () => {
     expect(
       getApprovalDecisionAvailability(
         { ...pending, status: 'approved' },
-        reviewer,
+        { ...author, permissions: [] },
       ),
     ).toBe('terminal')
   })

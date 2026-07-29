@@ -5,32 +5,31 @@ import type {
 } from '@/shared/api'
 
 /** Описывает русскую подпись и вариант Badge для статуса запроса. */
-export type ApprovalRequestStatusPresentation = {
+export type ApprovalRequestStatusPresentation = Readonly<{
   label: string
   variant: 'default' | 'secondary' | 'destructive'
-}
+}>
 
 /** Описывает, может ли текущий пользователь принять решение по запросу. */
 export type ApprovalDecisionAvailability =
   'available' | 'terminal' | 'own-request' | 'missing-permission'
 
-const approvalRequestStatusPresentations: Record<
-  ApprovalRequestResponseDtoStatus,
-  ApprovalRequestStatusPresentation
-> = {
-  pending: {
+const approvalRequestStatusPresentations: Readonly<
+  Record<ApprovalRequestResponseDtoStatus, ApprovalRequestStatusPresentation>
+> = Object.freeze({
+  pending: Object.freeze({
     label: 'Ожидает решения',
     variant: 'secondary',
-  },
-  approved: {
+  }),
+  approved: Object.freeze({
     label: 'Одобрен',
     variant: 'default',
-  },
-  rejected: {
+  }),
+  rejected: Object.freeze({
     label: 'Отклонён',
     variant: 'destructive',
-  },
-}
+  }),
+})
 
 const defaultApprovalRequestDateFormatter = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'short',
@@ -40,7 +39,7 @@ const defaultApprovalRequestDateFormatter = new Intl.DateTimeFormat('ru-RU', {
 /**
  * Возвращает русское представление статуса запроса согласования.
  *
- * @returns Неизменяемый UI-контракт с подписью и допустимым вариантом `Badge`.
+ * @returns Readonly UI-контракт, защищённый от изменения во время выполнения.
  */
 export function getApprovalRequestStatusPresentation(
   status: ApprovalRequestResponseDtoStatus,
