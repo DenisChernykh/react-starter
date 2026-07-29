@@ -63,4 +63,15 @@ export default defineConfig([
       'jsdoc/require-jsdoc': 'off',
     },
   },
+  {
+    files: ['src/shared/ui/button.tsx'],
+    rules: {
+      'react-refresh/only-export-components': [
+        'error',
+        {
+          allowExportNames: ['buttonVariants'],
+        },
+      ],
+    },
+  },
 ])

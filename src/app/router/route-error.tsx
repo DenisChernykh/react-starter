@@ -8,7 +8,13 @@ import {
 
 import { clearCurrentSession } from '@/entities/session'
 import { isProblemCode } from '@/shared/api'
-import { ErrorMessage } from '@/shared/ui'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  Container,
+} from '@/shared/ui'
 
 import { queryClient } from '../config/query-client'
 import { getRouteErrorPresentation } from './route-error-presentation'
@@ -45,25 +51,33 @@ export function RouteError() {
 
   const presentation = getRouteErrorPresentation(error)
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <section className="max-w-md text-center">
-        <ErrorMessage>{presentation.message}</ErrorMessage>
-        {presentation.requestId !== undefined &&
-          presentation.requestId.length > 0 && (
-            <p className="mt-2 text-sm text-zinc-600">
-              Код запроса: {presentation.requestId}
-            </p>
-          )}
+    <Container
+      as="main"
+      className="flex min-h-screen items-center justify-center py-6"
+    >
+      <section className="w-full max-w-md">
+        <Alert variant="destructive">
+          <AlertTitle>Не удалось открыть страницу</AlertTitle>
+          <AlertDescription>
+            <p>{presentation.message}</p>
+            {Boolean(presentation.requestId) && (
+              <p className="mt-2 text-xs">
+                Код запроса: {presentation.requestId}
+              </p>
+            )}
+          </AlertDescription>
+        </Alert>
         {presentation.retryable && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            className="mt-4"
             onClick={() => revalidator.revalidate()}
-            className="mt-4 rounded-md border border-zinc-300 px-3 py-2"
           >
             Повторить
-          </button>
+          </Button>
         )}
       </section>
-    </main>
+    </Container>
   )
 }

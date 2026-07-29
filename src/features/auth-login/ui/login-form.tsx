@@ -7,7 +7,13 @@ import {
   authLoginSchema,
   type LoginRequestDto,
 } from '@/shared/api'
-import { ErrorMessage } from '@/shared/ui'
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  PasswordField,
+  TextField,
+} from '@/shared/ui'
 
 import {
   getLoginFormError,
@@ -63,50 +69,36 @@ export function LoginForm({ returnTo }: LoginFormProps) {
   })
 
   return (
-    <form className="mt-6 space-y-4" onSubmit={submit} noValidate>
-      <div>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          aria-invalid={errors.email !== undefined}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
-          {...register('email')}
-        />
-        {emailError !== undefined && emailError.length > 0 && (
-          <ErrorMessage id="email-error">{emailError}</ErrorMessage>
-        )}
-      </div>
+    <form className="space-y-4" onSubmit={submit} noValidate>
+      <TextField
+        label="Email"
+        type="email"
+        autoComplete="email"
+        error={emailError}
+        {...register('email')}
+      />
 
-      <div>
-        <label htmlFor="password">Пароль</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          aria-invalid={errors.password !== undefined}
-          aria-describedby={errors.password ? 'password-error' : undefined}
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
-          {...register('password')}
-        />
-        {passwordError !== undefined && passwordError.length > 0 && (
-          <ErrorMessage id="password-error">{passwordError}</ErrorMessage>
-        )}
-      </div>
+      <PasswordField
+        label="Пароль"
+        autoComplete="current-password"
+        error={passwordError}
+        {...register('password')}
+      />
 
       {formError !== null && formError.length > 0 && (
-        <ErrorMessage>{formError}</ErrorMessage>
+        <Alert variant="destructive">
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
       )}
 
-      <button
+      <Button
         type="submit"
-        disabled={login.isPending}
-        className="w-full rounded-md bg-zinc-950 px-4 py-2 text-white disabled:opacity-50"
+        className="w-full"
+        isLoading={login.isPending}
+        loadingLabel="Входим"
       >
-        {login.isPending ? 'Входим…' : 'Войти'}
-      </button>
+        Войти
+      </Button>
     </form>
   )
 }

@@ -104,4 +104,32 @@ describe('LogoutButton', () => {
       screen.queryByText('Raw infrastructure detail'),
     ).not.toBeInTheDocument()
   })
+
+  it('shows an accessible spinner and blocks repeated logout while pending', async () => {
+    let releaseLogout!: () => void
+    const logoutGate = new Promise<void>((resolve) => {
+      releaseLogout = resolve
+    })
+    server.use(
+      http.post(`${apiOrigin}/v1/auth/logout`, async () => {
+        await logoutGate
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderLogout()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Выйти' }))
+
+    const pendingButton = await screen.findByRole('button', {
+      name: 'Выходим',
+    })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute('aria-busy', 'true')
+    expect(
+      pendingButton.querySelector('[data-slot="spinner"]'),
+    ).toBeInTheDocument()
+
+    releaseLogout()
+    expect(await screen.findByText('Login route')).toBeVisible()
+  })
 })

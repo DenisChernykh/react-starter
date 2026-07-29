@@ -1,5 +1,5 @@
 import { isProblemCode } from '@/shared/api'
-import { ErrorMessage } from '@/shared/ui'
+import { Alert, AlertDescription, Button } from '@/shared/ui'
 
 import { useLogout } from '../model/use-logout'
 
@@ -17,16 +17,21 @@ export function LogoutButton() {
 
   return (
     <div>
-      <button
+      <Button
         type="button"
-        disabled={logout.isPending}
+        variant="outline"
+        isLoading={logout.isPending}
+        loadingLabel="Выходим"
         onClick={() => logout.mutate()}
-        className="rounded-md border border-zinc-300 px-3 py-2 disabled:opacity-50"
       >
-        {logout.isPending ? 'Выходим…' : 'Выйти'}
-      </button>
+        Выйти
+      </Button>
       {visibleFailure && (
-        <ErrorMessage>Не удалось выйти. Повторите попытку.</ErrorMessage>
+        <Alert variant="destructive" className="mt-3">
+          <AlertDescription>
+            Не удалось выйти. Повторите попытку.
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   )
