@@ -133,8 +133,9 @@ describe('application router session guard', () => {
 
   it('revalidates a cached session before allowing a protected approval route', async () => {
     server.use(http.get(`${apiOrigin}/v1/auth/me`, authenticationRequired))
-    const { queryClient, router, session } =
+    const { api, queryClient, router, session } =
       await createApplicationRouter('/login')
+    api.setCsrfToken('csrf-token')
     queryClient.setQueryData(session.currentSessionQueryKey(), {
       userId: 'cached-user',
       normalizedEmail: 'cached@example.com',
@@ -145,6 +146,7 @@ describe('application router session guard', () => {
     await router.navigate('/approval-requests/new')
 
     expect(router.state.location.pathname).toBe('/login')
+    expect(api.peekCsrfToken()).toBeNull()
     expect(
       queryClient.getQueryData(session.currentSessionQueryKey()),
     ).toBeUndefined()
