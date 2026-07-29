@@ -162,6 +162,25 @@ describe('AppShell', () => {
     ).toBeVisible()
   })
 
+  it.each([
+    { path: '/', width: 1024, context: 'Обзор' },
+    {
+      path: '/approval-requests/new',
+      width: 390,
+      context: 'Согласование',
+    },
+  ])(
+    'shows the $context route context in the $width px header',
+    ({ path, width, context }) => {
+      setViewport(width)
+      renderAppShell(path)
+
+      expect(
+        within(screen.getByRole('banner')).getByText(context),
+      ).toBeVisible()
+    },
+  )
+
   it('renders children in the shell main content', () => {
     renderAppShell()
 
@@ -194,5 +213,23 @@ describe('AppShell', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+  })
+
+  it('closes mobile navigation with Escape and restores trigger focus', async () => {
+    setViewport(390)
+    const user = userEvent.setup()
+    renderAppShell('/approval-requests/open')
+    const trigger = screen.getByRole('button', {
+      name: 'Открыть навигацию',
+    })
+
+    await user.click(trigger)
+    await screen.findByRole('dialog')
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    expect(trigger).toHaveFocus()
   })
 })

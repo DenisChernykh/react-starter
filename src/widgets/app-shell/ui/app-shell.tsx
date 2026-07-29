@@ -19,16 +19,20 @@ import {
   useSidebar,
 } from '@/shared/ui'
 
+type AppNavigationProps = Readonly<{
+  approvalActive: boolean
+  overviewActive: boolean
+}>
+
 /**
  * Рендерит навигацию приложения и закрывает mobile drawer после перехода.
  *
  * @remarks Требует родительский `SidebarProvider` и React Router. На desktop
- * переход не меняет состояние свёрнутого sidebar.
+ * переход не меняет состояние свёрнутого sidebar. Active state получает от
+ * оболочки вместе с header context, чтобы route matching не дублировался.
  */
-function AppNavigation() {
+function AppNavigation({ approvalActive, overviewActive }: AppNavigationProps) {
   const { isMobile, setOpenMobile } = useSidebar()
-  const overviewMatch = useMatch({ path: '/', end: true })
-  const approvalMatch = useMatch('/approval-requests/*')
 
   function closeMobileNavigation() {
     if (isMobile) {
@@ -41,7 +45,7 @@ function AppNavigation() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
-            isActive={Boolean(overviewMatch)}
+            isActive={overviewActive}
             render={<NavLink to="/" end onClick={closeMobileNavigation} />}
           >
             <LayoutDashboard aria-hidden="true" />
@@ -50,7 +54,7 @@ function AppNavigation() {
         </SidebarMenuItem>
         <SidebarMenuItem>
           <SidebarMenuButton
-            isActive={Boolean(approvalMatch)}
+            isActive={approvalActive}
             render={
               <NavLink
                 to="/approval-requests"
@@ -72,10 +76,14 @@ function AppNavigation() {
  *
  * @remarks Требует React Router, `SidebarProvider` создаётся внутри компонента.
  * Читает suspense session query, поэтому рендерится только под защищённым
- * маршрутом внутри `AppProvider`.
+ * маршрутом внутри `AppProvider`. Один route match управляет одновременно
+ * active navigation и кратким контекстом desktop/mobile header.
  */
 export function AppShell({ children }: PropsWithChildren): ReactNode {
   const { data: user } = useCurrentSession()
+  const overviewActive = Boolean(useMatch({ path: '/', end: true }))
+  const approvalActive = Boolean(useMatch('/approval-requests/*'))
+  const routeContext = approvalActive ? 'Согласование' : 'Обзор'
 
   return (
     <SidebarProvider>
@@ -83,7 +91,10 @@ export function AppShell({ children }: PropsWithChildren): ReactNode {
         <SidebarHeader>
           <span className="px-2 text-xs font-semibold">React Starter</span>
         </SidebarHeader>
-        <AppNavigation />
+        <AppNavigation
+          overviewActive={overviewActive}
+          approvalActive={approvalActive}
+        />
         <SidebarFooter>
           <span className="min-w-0 truncate px-2 text-xs text-muted-foreground">
             {user.normalizedEmail}
@@ -92,8 +103,9 @@ export function AppShell({ children }: PropsWithChildren): ReactNode {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-12 items-center border-b px-4">
+        <header className="flex h-12 items-center gap-2 border-b px-4">
           <SidebarTrigger aria-label="Открыть навигацию" />
+          <span className="text-sm font-medium">{routeContext}</span>
         </header>
         <Container className="flex-1 py-6">{children}</Container>
       </SidebarInset>

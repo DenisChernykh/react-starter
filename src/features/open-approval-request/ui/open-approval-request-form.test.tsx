@@ -10,6 +10,7 @@ import { OpenApprovalRequestForm } from './open-approval-request-form'
 
 const apiOrigin = 'http://localhost:3000'
 const requestId = 'c9c6cbca-47e6-4ab0-932e-30f7a0e97184'
+const uppercaseRequestId = requestId.toUpperCase()
 
 function renderOpenApprovalRequestForm() {
   const router = createMemoryRouter(
@@ -66,7 +67,7 @@ describe('OpenApprovalRequestForm', () => {
     expect(detailsRequests).toBe(0)
   })
 
-  it('navigates to the exact details path without requesting it', async () => {
+  it('preserves uppercase UUID spelling in the details route without requesting it', async () => {
     let detailsRequests = 0
     server.use(
       http.get(`${apiOrigin}/v1/approval-requests/:requestId`, () => {
@@ -79,7 +80,7 @@ describe('OpenApprovalRequestForm', () => {
 
     await user.type(
       screen.getByRole('textbox', { name: 'ID запроса' }),
-      requestId,
+      uppercaseRequestId,
     )
     await user.click(screen.getByRole('button', { name: 'Открыть запрос' }))
 
@@ -87,7 +88,7 @@ describe('OpenApprovalRequestForm', () => {
       await screen.findByText('Карточка запроса согласования'),
     ).toBeVisible()
     expect(router.state.location.pathname).toBe(
-      `/approval-requests/${requestId}`,
+      `/approval-requests/${uppercaseRequestId}`,
     )
     expect(detailsRequests).toBe(0)
   })

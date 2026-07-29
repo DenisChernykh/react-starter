@@ -23,6 +23,27 @@ const requiredPaths = {
   },
 }
 
+const requiredApprovalOperations = [
+  {
+    label: 'create',
+    path: '/v1/approval-requests',
+    method: 'post',
+    operationId: 'approvalRequestsCreate',
+  },
+  {
+    label: 'get',
+    path: '/v1/approval-requests/{requestId}',
+    method: 'get',
+    operationId: 'approvalRequestsGet',
+  },
+  {
+    label: 'decide',
+    path: '/v1/approval-requests/{requestId}/decision',
+    method: 'put',
+    operationId: 'approvalRequestsDecide',
+  },
+]
+
 describe('OpenAPI synchronization', () => {
   it.each([undefined, '', {}, { openapi: '2.0', paths: requiredPaths }])(
     'rejects an invalid document',
@@ -40,14 +61,29 @@ describe('OpenAPI synchronization', () => {
     )
   })
 
-  it('rejects a document missing a required approval operation', () => {
-    const paths = structuredClone(requiredPaths)
-    delete paths['/v1/approval-requests/{requestId}/decision']
+  it.each(requiredApprovalOperations)(
+    'rejects a document missing the approval $label operation',
+    ({ path, method }) => {
+      const paths = structuredClone(requiredPaths)
+      delete paths[path][method]
 
-    expect(() => validateOpenApiDocument({ openapi: '3.0.3', paths })).toThrow(
-      '/v1/approval-requests/{requestId}/decision',
-    )
-  })
+      expect(() =>
+        validateOpenApiDocument({ openapi: '3.0.3', paths }),
+      ).toThrow(path)
+    },
+  )
+
+  it.each(requiredApprovalOperations)(
+    'rejects a wrong operationId for the approval $label operation',
+    ({ path, method, operationId }) => {
+      const paths = structuredClone(requiredPaths)
+      paths[path][method].operationId = `${operationId}Wrong`
+
+      expect(() =>
+        validateOpenApiDocument({ openapi: '3.0.3', paths }),
+      ).toThrow(path)
+    },
+  )
 
   it('writes the source bytes with one normalized trailing newline', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'react-starter-openapi-'))

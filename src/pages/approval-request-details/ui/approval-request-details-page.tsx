@@ -77,7 +77,7 @@ function getDetailErrorPresentation(error: unknown): DetailErrorPresentation {
 /** Рендерит локальное состояние недоступного или несуществующего запроса. */
 function ApprovalRequestUnavailable() {
   return (
-    <section className="mx-auto max-w-2xl space-y-6">
+    <section className="mx-auto max-w-2xl min-w-0 space-y-6">
       <Link
         className="text-sm text-primary underline-offset-4 hover:underline"
         to={approvalRequestsPath}
@@ -111,14 +111,16 @@ function ApprovalRequestDetailsContent({
       >
         К согласованию
       </Link>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h1 className="text-2xl font-semibold">{request.title}</h1>
+      <Card className="min-w-0 overflow-visible">
+        <CardHeader className="min-w-0">
+          <CardTitle className="min-w-0">
+            <h1 className="min-w-0 text-2xl font-semibold [overflow-wrap:anywhere]">
+              {request.title}
+            </h1>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <dl className="space-y-4 text-sm">
+        <CardContent className="min-w-0">
+          <dl className="min-w-0 space-y-4 text-sm">
             <div className="space-y-1">
               <dt className="text-muted-foreground">ID запроса</dt>
               <dd className="break-all">{request.id}</dd>
@@ -131,7 +133,9 @@ function ApprovalRequestDetailsContent({
             </div>
             <div className="space-y-1">
               <dt className="text-muted-foreground">Описание</dt>
-              <dd>{request.description}</dd>
+              <dd className="min-w-0 [overflow-wrap:anywhere] whitespace-pre-wrap">
+                {request.description}
+              </dd>
             </div>
             <div className="space-y-1">
               <dt className="text-muted-foreground">Автор</dt>

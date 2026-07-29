@@ -182,6 +182,36 @@ describe('ApprovalRequestDetailsPage', () => {
     expect(screen.queryByText(pendingRequest.createdAt)).not.toBeInTheDocument()
   })
 
+  it('keeps maximum unbroken title and multiline-capable description readable in a mobile card', async () => {
+    const longRequest = {
+      ...pendingRequest,
+      title: 'З'.repeat(120),
+      description: 'О'.repeat(2_000),
+    } satisfies ApprovalRequestResponseDto
+    server.use(
+      http.get(`${apiOrigin}/v1/approval-requests/:requestId`, () =>
+        HttpResponse.json(longRequest),
+      ),
+    )
+
+    renderApprovalRequestDetails()
+
+    const title = await screen.findByRole('heading', {
+      name: longRequest.title,
+    })
+    const description = screen.getByText(longRequest.description)
+    const card = title.closest('[data-slot="card"]')
+
+    expect(title).toHaveClass('min-w-0', '[overflow-wrap:anywhere]')
+    expect(description).toHaveClass(
+      'min-w-0',
+      'whitespace-pre-wrap',
+      '[overflow-wrap:anywhere]',
+    )
+    expect(card).toHaveClass('min-w-0', 'overflow-visible')
+    expect(card).not.toHaveClass('overflow-hidden')
+  })
+
   it('renders the terminal decision actor and date', async () => {
     server.use(
       http.get(`${apiOrigin}/v1/approval-requests/:requestId`, () =>

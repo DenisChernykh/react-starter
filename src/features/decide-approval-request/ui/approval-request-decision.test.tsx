@@ -31,6 +31,7 @@ import { ApprovalRequestDecision } from './approval-request-decision'
 const apiOrigin = 'http://localhost:3000'
 const csrfToken = 'C'.repeat(43)
 const requestId = 'c9c6cbca-47e6-4ab0-932e-30f7a0e97184'
+const uppercaseRequestId = requestId.toUpperCase()
 const requestIdB = 'e7df8c6d-d2b2-4c29-b362-02da53b15a78'
 const authorId = '401deac1-f230-4926-961e-d4c3ac510cec'
 const reviewerId = '6a9f79ea-b651-4dc2-870b-c4e9f2da4d58'
@@ -165,10 +166,12 @@ function problem(
   )
 }
 
-function ApprovalRequestDetailFixture() {
+function ApprovalRequestDetailFixture({
+  routeRequestId,
+}: Readonly<{ routeRequestId: string }>) {
   const details = useQuery({
-    queryKey: approvalRequestQueryKey(requestId),
-    queryFn: () => approvalRequestsGet({ requestId }),
+    queryKey: approvalRequestQueryKey(routeRequestId),
+    queryFn: () => approvalRequestsGet({ requestId: routeRequestId }),
     retry: false,
   })
 
@@ -180,16 +183,18 @@ function ApprovalRequestDetailFixture() {
   )
 }
 
-function renderActiveApprovalRequestDetail() {
+function renderActiveApprovalRequestDetail(routeRequestId = requestId) {
   const queryClient = createQueryClient()
   const router = createMemoryRouter(
     [
       {
         path: '/approval-requests/:requestId',
-        element: <ApprovalRequestDetailFixture />,
+        element: (
+          <ApprovalRequestDetailFixture routeRequestId={routeRequestId} />
+        ),
       },
     ],
-    { initialEntries: [`/approval-requests/${requestId}`] },
+    { initialEntries: [`/approval-requests/${routeRequestId}`] },
   )
 
   render(
@@ -488,11 +493,45 @@ describe('ApprovalRequestDecision', () => {
     })
   })
 
+  it('updates the visible uppercase-origin detail from a lowercase decision DTO', async () => {
+    const detailRequestIds: string[] = []
+    server.use(
+      http.get(`${apiOrigin}/v1/approval-requests/:requestId`, ({ params }) => {
+        detailRequestIds.push(String(params.requestId))
+        return HttpResponse.json(pendingRequest)
+      }),
+      csrfHandler(),
+      http.put(`${apiOrigin}/v1/approval-requests/:id/decision`, () =>
+        HttpResponse.json(approvedRequest),
+      ),
+    )
+    const { queryClient } =
+      renderActiveApprovalRequestDetail(uppercaseRequestId)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Одобрить' }))
+    const dialog = await screen.findByRole('alertdialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Одобрить' }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Одобрить' }),
+      ).not.toBeInTheDocument()
+    })
+    expect(
+      queryClient.getQueryData(approvalRequestQueryKey(uppercaseRequestId)),
+    ).toEqual(approvedRequest)
+    expect(queryClient.getQueryCache().findAll()).toHaveLength(1)
+    expect(detailRequestIds).toEqual([uppercaseRequestId])
+  })
+
   it('refreshes active details and shows safe conflict copy when a request was already decided', async () => {
     let detailsRequests = 0
+    const detailRequestIds: string[] = []
     server.use(
-      http.get(`${apiOrigin}/v1/approval-requests/:id`, () => {
+      http.get(`${apiOrigin}/v1/approval-requests/:id`, ({ params }) => {
         detailsRequests += 1
+        detailRequestIds.push(String(params.id))
         return HttpResponse.json(
           detailsRequests === 1 ? pendingRequest : approvedRequest,
         )
@@ -502,7 +541,8 @@ describe('ApprovalRequestDecision', () => {
         problem(409, 'APPROVAL_REQUEST_ALREADY_DECIDED'),
       ),
     )
-    renderActiveApprovalRequestDetail()
+    const { queryClient } =
+      renderActiveApprovalRequestDetail(uppercaseRequestId)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Одобрить' }))
@@ -513,6 +553,9 @@ describe('ApprovalRequestDecision', () => {
       await screen.findByText('Запрос уже обработан. Данные обновлены.'),
     ).toBeVisible()
     await waitFor(() => expect(detailsRequests).toBeGreaterThanOrEqual(2))
+    expect(detailRequestIds.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(detailRequestIds)).toEqual(new Set([uppercaseRequestId]))
+    expect(queryClient.getQueryCache().findAll()).toHaveLength(1)
   })
 
   it('does not transfer a conflict alert from terminal request A to terminal request B', async () => {
@@ -607,9 +650,11 @@ describe('ApprovalRequestDecision', () => {
   it('refreshes active details into the unavailable state when the request disappears', async () => {
     let detailsRequests = 0
     let requestIsUnavailable = false
+    const detailRequestIds: string[] = []
     server.use(
-      http.get(`${apiOrigin}/v1/approval-requests/:id`, () => {
+      http.get(`${apiOrigin}/v1/approval-requests/:id`, ({ params }) => {
         detailsRequests += 1
+        detailRequestIds.push(String(params.id))
         return requestIsUnavailable
           ? problem(404, 'APPROVAL_REQUEST_NOT_FOUND')
           : HttpResponse.json(pendingRequest)
@@ -620,7 +665,8 @@ describe('ApprovalRequestDecision', () => {
         return problem(404, 'APPROVAL_REQUEST_NOT_FOUND')
       }),
     )
-    renderActiveApprovalRequestDetail()
+    const { queryClient } =
+      renderActiveApprovalRequestDetail(uppercaseRequestId)
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: 'Одобрить' }))
@@ -629,6 +675,9 @@ describe('ApprovalRequestDecision', () => {
 
     expect(await screen.findByText('Запрос недоступен')).toBeVisible()
     await waitFor(() => expect(detailsRequests).toBeGreaterThanOrEqual(2))
+    expect(detailRequestIds.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(detailRequestIds)).toEqual(new Set([uppercaseRequestId]))
+    expect(queryClient.getQueryCache().findAll()).toHaveLength(1)
   })
 
   it('revalidates the route after an authentication failure', async () => {
@@ -668,6 +717,49 @@ describe('ApprovalRequestDecision', () => {
       await waitFor(() => expect(trigger).toHaveFocus())
     },
   )
+
+  it.each(['Одобрить', 'Отклонить'])(
+    'closes the %s dialog with Escape without PUT and restores the exact trigger focus',
+    async (action) => {
+      let putRequests = 0
+      server.use(
+        http.put(`${apiOrigin}/v1/approval-requests/:id/decision`, () => {
+          putRequests += 1
+          return HttpResponse.json(approvedRequest)
+        }),
+      )
+      renderApprovalRequestDecision()
+      const user = userEvent.setup()
+      const trigger = screen.getByRole('button', { name: action })
+
+      await user.click(trigger)
+      await screen.findByRole('alertdialog')
+      await user.keyboard('{Escape}')
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
+      expect(trigger).toHaveFocus()
+      expect(putRequests).toBe(0)
+    },
+  )
+
+  it('wraps the longest valid unbroken title in dialog copy', async () => {
+    const longTitleRequest = {
+      ...pendingRequest,
+      title: 'Т'.repeat(120),
+    } satisfies ApprovalRequestResponseDto
+    renderApprovalRequestDecision({ request: longTitleRequest })
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Одобрить' }))
+    const dialog = await screen.findByRole('alertdialog')
+    const description = within(dialog).getByText(
+      `«${longTitleRequest.title}». Решение нельзя отменить.`,
+    )
+
+    expect(description).toHaveClass('min-w-0', '[overflow-wrap:anywhere]')
+  })
 
   it('keeps a failed dialog open with safe copy and without raw server detail', async () => {
     server.use(

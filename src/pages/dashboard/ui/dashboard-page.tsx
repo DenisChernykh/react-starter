@@ -10,9 +10,9 @@ export function DashboardPage() {
   const { data: user } = useCurrentSession()
 
   return (
-    <section className="space-y-2">
+    <section className="min-w-0 space-y-2">
       <h1 className="text-2xl font-semibold">Обзор</h1>
-      <p className="text-muted-foreground">
+      <p className="min-w-0 [overflow-wrap:anywhere] text-muted-foreground">
         Вы вошли как {user.normalizedEmail}
       </p>
     </section>

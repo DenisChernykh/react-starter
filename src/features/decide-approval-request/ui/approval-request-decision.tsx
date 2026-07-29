@@ -109,9 +109,9 @@ function DecisionDialog({
         {copy.action}
       </AlertDialogTrigger>
       <AlertDialogContent>
-        <AlertDialogHeader>
+        <AlertDialogHeader className="min-w-0">
           <AlertDialogTitle>{copy.title}</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogDescription className="min-w-0 [overflow-wrap:anywhere]">
             «{request.title}». Решение нельзя отменить.
           </AlertDialogDescription>
         </AlertDialogHeader>

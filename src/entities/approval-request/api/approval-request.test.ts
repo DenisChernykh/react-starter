@@ -15,6 +15,8 @@ import {
 } from './approval-request'
 
 const apiOrigin = 'http://localhost:3000'
+const canonicalRequestId = 'c9c6cbca-47e6-4ab0-932e-30f7a0e97184'
+const uppercaseRequestId = canonicalRequestId.toUpperCase()
 
 const request = {
   createdAt: '2026-07-29T06:15:00.000Z',
@@ -38,6 +40,38 @@ describe('approval request query adapter', () => {
     expect(approvalRequestQueryOptions(request.id).queryKey).toEqual(
       approvalRequestQueryKey(request.id),
     )
+  })
+
+  it('shares a lowercase cache identity while preserving uppercase spelling in the GET URL', async () => {
+    let requestedId: string | undefined
+    const canonicalRequest = {
+      ...request,
+      id: canonicalRequestId,
+    } satisfies ApprovalRequestResponseDto
+    server.use(
+      http.get(`${apiOrigin}/v1/approval-requests/:requestId`, ({ params }) => {
+        requestedId = String(params.requestId)
+        return HttpResponse.json(canonicalRequest)
+      }),
+    )
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await queryClient.fetchQuery(
+      approvalRequestQueryOptions(uppercaseRequestId),
+    )
+
+    expect(requestedId).toBe(uppercaseRequestId)
+    expect(approvalRequestQueryKey(uppercaseRequestId)).toEqual(
+      getApprovalRequestsGetQueryKey({ requestId: canonicalRequestId }),
+    )
+    expect(approvalRequestQueryOptions(uppercaseRequestId).queryKey).toEqual(
+      approvalRequestQueryKey(canonicalRequestId),
+    )
+    expect(
+      queryClient.getQueryData(approvalRequestQueryKey(canonicalRequestId)),
+    ).toEqual(canonicalRequest)
   })
 
   it('forwards TanStack Query cancellation to the HTTP request', async () => {
@@ -108,5 +142,24 @@ describe('approval request query adapter', () => {
     expect(
       queryClient.getQueryData(approvalRequestQueryKey(request.id)),
     ).toEqual(request)
+  })
+
+  it('writes a lowercase server DTO into an uppercase-origin cache entry', () => {
+    const queryClient = new QueryClient()
+    const canonicalRequest = {
+      ...request,
+      id: canonicalRequestId,
+    } satisfies ApprovalRequestResponseDto
+    queryClient.setQueryData(
+      approvalRequestQueryKey(uppercaseRequestId),
+      request,
+    )
+
+    setApprovalRequest(queryClient, canonicalRequest)
+
+    expect(
+      queryClient.getQueryData(approvalRequestQueryKey(uppercaseRequestId)),
+    ).toEqual(canonicalRequest)
+    expect(queryClient.getQueryCache().findAll()).toHaveLength(1)
   })
 })
