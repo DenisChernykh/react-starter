@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRevalidator } from 'react-router'
 
@@ -28,11 +28,14 @@ import { useCreateApprovalRequest } from '../model/use-create-approval-request'
  * @remarks Требует React Router и `QueryClientProvider`. Проверяет поля generated
  * Zod schema, записывает поддерживаемые server validation errors в поля, а при
  * `AUTHENTICATION_REQUIRED` запускает revalidation protected router без показа
- * устаревшей business-ошибки. Успешную запись и навигацию выполняет mutation hook.
+ * устаревшей business-ошибки. Синхронный ref блокирует повторный submit до
+ * rerender и освобождается в `finally` для каждого исхода mutation. Успешную
+ * запись и навигацию выполняет mutation hook.
  */
 export function CreateApprovalRequestForm() {
   const createApprovalRequest = useCreateApprovalRequest()
   const revalidator = useRevalidator()
+  const isSubmitInFlight = useRef(false)
   const [formError, setFormError] = useState<string | null>(null)
   const {
     formState: { errors },
@@ -46,36 +49,45 @@ export function CreateApprovalRequestForm() {
   const descriptionError = errors.description?.message
   const hasFormError = formError !== null && formError.length > 0
 
-  const submit = handleSubmit(async (request) => {
-    setFormError(null)
-    try {
-      await createApprovalRequest.mutateAsync(request)
-    } catch (error) {
-      if (
-        error instanceof ApiProblemError &&
-        error.code === 'AUTHENTICATION_REQUIRED'
-      ) {
-        void revalidator.revalidate()
-        return
-      }
-      if (
-        error instanceof ApiProblemError &&
-        error.code === 'VALIDATION_FAILED'
-      ) {
-        const fieldErrors = mapCreateApprovalRequestValidationErrors(
-          error.problem,
-        )
-        for (const [field, message] of Object.entries(fieldErrors)) {
-          setError(field as keyof CreateApprovalRequestDto, {
-            type: 'server',
-            message,
-          })
-        }
-        if (Object.keys(fieldErrors).length > 0) return
-      }
-      setFormError(getCreateApprovalRequestError(error))
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    if (isSubmitInFlight.current) {
+      event.preventDefault()
+      return
     }
-  })
+    isSubmitInFlight.current = true
+    void handleSubmit(async (request) => {
+      setFormError(null)
+      try {
+        await createApprovalRequest.mutateAsync(request)
+      } catch (error) {
+        if (
+          error instanceof ApiProblemError &&
+          error.code === 'AUTHENTICATION_REQUIRED'
+        ) {
+          void revalidator.revalidate()
+          return
+        }
+        if (
+          error instanceof ApiProblemError &&
+          error.code === 'VALIDATION_FAILED'
+        ) {
+          const fieldErrors = mapCreateApprovalRequestValidationErrors(
+            error.problem,
+          )
+          for (const [field, message] of Object.entries(fieldErrors)) {
+            setError(field as keyof CreateApprovalRequestDto, {
+              type: 'server',
+              message,
+            })
+          }
+          if (Object.keys(fieldErrors).length > 0) return
+        }
+        setFormError(getCreateApprovalRequestError(error))
+      }
+    })(event).finally(() => {
+      isSubmitInFlight.current = false
+    })
+  }
 
   return (
     <form className="space-y-4" onSubmit={submit} noValidate>

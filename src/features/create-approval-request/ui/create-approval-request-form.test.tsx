@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -197,9 +197,45 @@ describe('CreateApprovalRequestForm', () => {
     await user.click(screen.getByRole('button', { name: 'Создать запрос' }))
 
     expect(await screen.findByText('Сервис временно недоступен.')).toBeVisible()
+    expect(screen.getByLabelText('Название')).toHaveValue(createdRequest.title)
+    expect(screen.getByLabelText('Описание')).toHaveValue(
+      createdRequest.description,
+    )
     expect(
       screen.queryByText('Сырым текстом сервера нельзя показывать эту строку'),
     ).not.toBeInTheDocument()
+  })
+
+  it('accepts only one synchronous submit before the loading button rerenders', async () => {
+    let postRequests = 0
+    let releaseRequest!: () => void
+    const requestGate = new Promise<void>((resolve) => {
+      releaseRequest = resolve
+    })
+    server.use(
+      csrfHandler(),
+      http.post(`${apiOrigin}/v1/approval-requests`, async () => {
+        postRequests += 1
+        await requestGate
+        return HttpResponse.json(createdRequest, { status: 201 })
+      }),
+    )
+    renderCreateApprovalRequestForm()
+    await fillValidRequest()
+    const submitButton = screen.getByRole('button', {
+      name: 'Создать запрос',
+    })
+    const form = submitButton.closest('form')
+    if (form === null) throw new Error('Форма создания запроса не найдена')
+
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+
+    await waitFor(() => expect(postRequests).toBe(1))
+    releaseRequest()
+    expect(
+      await screen.findByText('Карточка запроса согласования'),
+    ).toBeVisible()
   })
 
   it('uses the shared loading button and prevents a duplicate POST while pending', async () => {
@@ -227,9 +263,7 @@ describe('CreateApprovalRequestForm', () => {
       expect(button).toHaveAttribute('aria-busy', 'true')
       expect(button.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
     })
-    await user.click(
-      screen.getByRole('button', { name: 'Создаём запрос' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Создаём запрос' }))
     await waitFor(() => expect(postRequests).toBe(1))
     releaseRequest()
   })
