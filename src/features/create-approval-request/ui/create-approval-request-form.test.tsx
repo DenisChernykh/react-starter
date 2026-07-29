@@ -206,6 +206,27 @@ describe('CreateApprovalRequestForm', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('preserves entered values and shows safe copy for a network failure', async () => {
+    server.use(
+      csrfHandler(),
+      http.post(`${apiOrigin}/v1/approval-requests`, () =>
+        HttpResponse.error(),
+      ),
+    )
+    renderCreateApprovalRequestForm()
+    const user = await fillValidRequest()
+
+    await user.click(screen.getByRole('button', { name: 'Создать запрос' }))
+
+    expect(
+      await screen.findByText('Не удалось подключиться к серверу.'),
+    ).toBeVisible()
+    expect(screen.getByLabelText('Название')).toHaveValue(createdRequest.title)
+    expect(screen.getByLabelText('Описание')).toHaveValue(
+      createdRequest.description,
+    )
+  })
+
   it('accepts only one synchronous submit before the loading button rerenders', async () => {
     let postRequests = 0
     let releaseRequest!: () => void
