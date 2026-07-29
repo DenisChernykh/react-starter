@@ -8,6 +8,13 @@ const requiredOperations = [
   ['/v1/auth/me', 'get', 'authGetMe'],
   ['/v1/auth/csrf', 'get', 'authGetCsrfToken'],
   ['/v1/auth/logout', 'post', 'authLogout'],
+  ['/v1/approval-requests', 'post', 'approvalRequestsCreate'],
+  ['/v1/approval-requests/{requestId}', 'get', 'approvalRequestsGet'],
+  [
+    '/v1/approval-requests/{requestId}/decision',
+    'put',
+    'approvalRequestsDecide',
+  ],
 ]
 
 export function validateOpenApiDocument(value) {

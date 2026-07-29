@@ -7,15 +7,24 @@ import { describe, expect, it } from 'vitest'
 
 import { syncOpenApi, validateOpenApiDocument } from './sync-openapi.mjs'
 
-const authPaths = {
+const requiredPaths = {
   '/v1/auth/login': { post: { operationId: 'authLogin' } },
   '/v1/auth/me': { get: { operationId: 'authGetMe' } },
   '/v1/auth/csrf': { get: { operationId: 'authGetCsrfToken' } },
   '/v1/auth/logout': { post: { operationId: 'authLogout' } },
+  '/v1/approval-requests': {
+    post: { operationId: 'approvalRequestsCreate' },
+  },
+  '/v1/approval-requests/{requestId}': {
+    get: { operationId: 'approvalRequestsGet' },
+  },
+  '/v1/approval-requests/{requestId}/decision': {
+    put: { operationId: 'approvalRequestsDecide' },
+  },
 }
 
 describe('OpenAPI synchronization', () => {
-  it.each([undefined, '', {}, { openapi: '2.0', paths: authPaths }])(
+  it.each([undefined, '', {}, { openapi: '2.0', paths: requiredPaths }])(
     'rejects an invalid document',
     (value) => {
       expect(() => validateOpenApiDocument(value)).toThrow()
@@ -23,11 +32,20 @@ describe('OpenAPI synchronization', () => {
   )
 
   it('rejects a document missing a required auth operation', () => {
-    const paths = { ...authPaths }
+    const paths = { ...requiredPaths }
     delete paths['/v1/auth/csrf']
 
     expect(() => validateOpenApiDocument({ openapi: '3.0.3', paths })).toThrow(
       '/v1/auth/csrf',
+    )
+  })
+
+  it('rejects a document missing a required approval operation', () => {
+    const paths = structuredClone(requiredPaths)
+    delete paths['/v1/approval-requests/{requestId}/decision']
+
+    expect(() => validateOpenApiDocument({ openapi: '3.0.3', paths })).toThrow(
+      '/v1/approval-requests/{requestId}/decision',
     )
   })
 
@@ -37,13 +55,13 @@ describe('OpenAPI synchronization', () => {
     const destination = join(directory, 'snapshot.json')
     await writeFile(
       source,
-      JSON.stringify({ openapi: '3.0.3', paths: authPaths }),
+      JSON.stringify({ openapi: '3.0.3', paths: requiredPaths }),
     )
 
     await syncOpenApi({ source, destination })
 
     expect(await readFile(destination, 'utf8')).toBe(
-      `${JSON.stringify({ openapi: '3.0.3', paths: authPaths })}\n`,
+      `${JSON.stringify({ openapi: '3.0.3', paths: requiredPaths })}\n`,
     )
   })
 
@@ -53,7 +71,7 @@ describe('OpenAPI synchronization', () => {
     const destination = join(directory, 'snapshot.json')
     await writeFile(
       source,
-      JSON.stringify({ openapi: '2.0', paths: authPaths }),
+      JSON.stringify({ openapi: '2.0', paths: requiredPaths }),
     )
     await writeFile(destination, 'previous snapshot\n')
 

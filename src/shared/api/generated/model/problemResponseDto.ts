@@ -8,6 +8,7 @@
 import type { ProblemResponseDtoCode } from './problemResponseDtoCode'
 
 export type ProblemResponseDto = {
+  /** @pattern ^[A-Z][A-Z0-9_]*$ */
   code: ProblemResponseDtoCode
   detail: string
   instance: string
