@@ -19,6 +19,10 @@ jobs:
         with:
           node-version: 24.18.0
       - run: corepack enable
+      - name: Verify locked toolchain
+        run: |
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.15.1"
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
 
@@ -35,6 +39,10 @@ jobs:
         with:
           node-version: 24.18.0
       - run: corepack enable
+      - name: Verify locked toolchain
+        run: |
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.15.1"
       - run: pnpm install --frozen-lockfile
       - id: metadata
         name: Derive immutable image metadata

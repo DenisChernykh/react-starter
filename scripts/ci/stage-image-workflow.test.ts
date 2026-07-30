@@ -11,6 +11,12 @@ const actionPins = [
   'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
   'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25',
 ]
+const toolchainCheck = `- run: corepack enable
+      - name: Verify locked toolchain
+        run: |
+          test "$(node --version)" = "v24.18.0"
+          test "$(pnpm --version)" = "11.15.1"
+      - run: pnpm install --frozen-lockfile`
 
 describe('stage image workflow', () => {
   it('keeps source CI separate from immutable stage-image publication', async () => {
@@ -30,6 +36,7 @@ describe('stage image workflow', () => {
     expect(stageImage).toContain('pnpm oci:check')
     expect(stageImage).not.toMatch(/DOKPLOY|VPS|SSH_PRIVATE_KEY/u)
     expect(stageImage).not.toMatch(/latest|stage-latest/u)
+    expect(stageImage.split(toolchainCheck)).toHaveLength(3)
 
     for (const actionPin of actionPins) {
       expect(stageImage).toContain(actionPin)
