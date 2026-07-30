@@ -1,6 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod'
 import { type FormEvent, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { useRevalidator } from 'react-router'
 
 import {
@@ -8,6 +6,7 @@ import {
   approvalRequestCreateSchema,
   type CreateApprovalRequestDto,
 } from '@/shared/api'
+import { useZodForm } from '@/shared/lib/form'
 import {
   Alert,
   AlertDescription,
@@ -42,9 +41,7 @@ export function CreateApprovalRequestForm() {
     handleSubmit,
     register,
     setError,
-  } = useForm<CreateApprovalRequestDto>({
-    resolver: zodResolver(approvalRequestCreateSchema),
-  })
+  } = useZodForm(approvalRequestCreateSchema)
   const titleError = errors.title?.message
   const descriptionError = errors.description?.message
   const hasFormError = formError !== null && formError.length > 0

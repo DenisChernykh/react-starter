@@ -1,11 +1,7 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 
-import {
-  approvalRequestPathSchema,
-  type ApprovalRequestsGetPathParameters,
-} from '@/shared/api'
+import { approvalRequestPathSchema } from '@/shared/api'
+import { useZodForm } from '@/shared/lib/form'
 import { approvalRequestDetailsPath } from '@/shared/routes'
 import { Button, TextField } from '@/shared/ui'
 
@@ -22,9 +18,7 @@ export function OpenApprovalRequestForm() {
     formState: { errors },
     handleSubmit,
     register,
-  } = useForm<ApprovalRequestsGetPathParameters>({
-    resolver: zodResolver(approvalRequestPathSchema),
-  })
+  } = useZodForm(approvalRequestPathSchema)
   const requestIdError = errors.requestId?.message
 
   const submit = handleSubmit(({ requestId }) => {
