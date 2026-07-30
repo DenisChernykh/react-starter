@@ -20,10 +20,32 @@ describe('frontend container files', () => {
 
   it('keeps backend paths out of the SPA fallback', async () => {
     const nginx = await readFile('config/nginx/default.conf', 'utf8')
+    const backendLocation = nginx
+      .split('location ~ ^/(?:v1|health)(?:/|$) {')[1]
+      ?.split(
+        'location ~* \\.(?:css|js|mjs|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$ {',
+      )[0]
 
     expect(nginx).toMatch(/location ~ \^\/\(\?:v1\|health\)/u)
-    expect(nginx).toContain('return 404;')
     expect(nginx).toContain('try_files $uri $uri/ /index.html;')
     expect(nginx).toContain('/_frontend/health')
+    expect(backendLocation).toBeDefined()
+    expect(backendLocation).toContain('default_type text/plain;')
+    expect(backendLocation).toContain('return 404 "Not Found\\n";')
+  })
+
+  it('emits one exact immutable Cache-Control value for hashed assets', async () => {
+    const nginx = await readFile('config/nginx/default.conf', 'utf8')
+    const assetLocation = nginx
+      .split(
+        'location ~* \\.(?:css|js|mjs|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$ {',
+      )[1]
+      ?.split('location = /index.html')[0]
+
+    expect(assetLocation).toBeDefined()
+    expect(assetLocation).not.toContain('expires 1y;')
+    expect(assetLocation).toContain(
+      'add_header Cache-Control "public, max-age=31536000, immutable" always;',
+    )
   })
 })
