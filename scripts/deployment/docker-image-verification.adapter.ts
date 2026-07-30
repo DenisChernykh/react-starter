@@ -11,6 +11,10 @@ import type { ImageVerificationPort } from './ports.ts'
 
 const COMMAND_TIMEOUT_MS = 30_000
 const TEMPORARY_CONFIG_PREFIX = 'react-starter-docker-auth-'
+const GHCR_REGISTRY_HOST = 'ghcr.io'
+const GHCR_REGISTRY_URL = 'https://ghcr.io'
+const GHCR_DIGEST_IMAGE_PATTERN =
+  /^ghcr\.io\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)@sha256:[0-9a-f]{64}$/u
 
 interface TemporaryDockerConfigFunctions {
   readonly chmod: (path: string, mode: number) => Promise<void>
@@ -98,6 +102,18 @@ function requireLabels(
   }
 }
 
+function requireValidImageInput(
+  input: Parameters<ImageVerificationPort['verify']>[0],
+): void {
+  const imageMatch = GHCR_DIGEST_IMAGE_PATTERN.exec(input.image.imageRef)
+  if (
+    input.registryUrl !== GHCR_REGISTRY_URL ||
+    imageMatch?.[1] !== input.repository.toLowerCase()
+  ) {
+    throw new DockerImageVerificationError('image input')
+  }
+}
+
 /**
  * Проверяет доступность exact digest и его OCI provenance через временную auth.
  *
@@ -125,6 +141,8 @@ export class DockerImageVerificationAdapter implements ImageVerificationPort {
   async verify(
     input: Parameters<ImageVerificationPort['verify']>[0],
   ): Promise<void> {
+    requireValidImageInput(input)
+
     let temporaryConfig: string | undefined
     let primaryError: DockerImageVerificationError | undefined
 
@@ -135,7 +153,6 @@ export class DockerImageVerificationAdapter implements ImageVerificationPort {
       )
       await this.temporaryDockerConfig.chmod(temporaryConfig, 0o700)
 
-      const registryHost = new URL(input.registryUrl).host
       const options: CommandOptions = {
         env: { ...process.env, DOCKER_CONFIG: temporaryConfig },
         signal: input.signal,
@@ -144,7 +161,7 @@ export class DockerImageVerificationAdapter implements ImageVerificationPort {
       await this.runCommand(
         [
           'login',
-          registryHost,
+          GHCR_REGISTRY_HOST,
           '--username',
           input.username,
           '--password-stdin',

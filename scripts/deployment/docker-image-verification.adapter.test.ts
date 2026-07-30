@@ -166,6 +166,89 @@ async function expectSafeVerificationFailure(
 }
 
 describe('DockerImageVerificationAdapter', () => {
+  it.each([
+    [
+      'mutable image tag',
+      {
+        image: {
+          imageRef: `ghcr.io/${repository}:stage`,
+          revision,
+        },
+      },
+    ],
+    [
+      'non-GHCR registry URL',
+      {
+        registryUrl: 'https://registry.example.com',
+      },
+    ],
+    [
+      'normalized but non-exact GHCR registry URL',
+      {
+        registryUrl: 'https://ghcr.io/',
+      },
+    ],
+    [
+      'non-GHCR image registry',
+      {
+        image: {
+          imageRef: `registry.example.com/${repository}@sha256:${digest}`,
+          revision,
+        },
+      },
+    ],
+    [
+      'mixed-case digest',
+      {
+        image: {
+          imageRef: `ghcr.io/${repository}@sha256:${'A'.repeat(64)}`,
+          revision,
+        },
+      },
+    ],
+    [
+      'malformed digest',
+      {
+        image: {
+          imageRef: `ghcr.io/${repository}@sha256:${'a'.repeat(63)}`,
+          revision,
+        },
+      },
+    ],
+    [
+      'mismatched repository',
+      {
+        image: {
+          imageRef: `ghcr.io/example/other-starter@sha256:${digest}`,
+          revision,
+        },
+      },
+    ],
+  ] as const)(
+    'rejects %s before creating auth or invoking Docker',
+    async (_caseName, overrides) => {
+      const commands = new FakeCommandPort()
+      const { adapter, temporary } = createAdapter(commands)
+      const rejectedValues = [
+        'registryUrl' in overrides ? overrides.registryUrl : undefined,
+        'image' in overrides ? overrides.image.imageRef : undefined,
+      ].filter((value) => value !== undefined)
+
+      const error = await expectSafeVerificationFailure(
+        adapter.verify(verifyInput(overrides)),
+        rejectedValues,
+      )
+
+      expect(error.message).toBe(
+        'Docker image verification failed: image input',
+      )
+      expect(commands.calls).toEqual([])
+      expect(temporary.mkdtempPrefixes).toEqual([])
+      expect(temporary.chmodCalls).toEqual([])
+      expect(temporary.rmCalls).toEqual([])
+    },
+  )
+
   it('logs in through stdin, pulls and inspects the exact digest with isolated auth', async () => {
     const commands = new FakeCommandPort()
     const { adapter, temporary } = createAdapter(commands)
