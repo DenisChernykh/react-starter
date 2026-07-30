@@ -9,6 +9,7 @@ import type { ProblemFieldErrorResponseDto } from './problemFieldErrorResponseDt
 import type { ValidationProblemResponseDtoCode } from './validationProblemResponseDtoCode'
 
 export type ValidationProblemResponseDto = {
+  /** @pattern ^[A-Z][A-Z0-9_]*$ */
   code: ValidationProblemResponseDtoCode
   detail: string
   errors: ProblemFieldErrorResponseDto[]

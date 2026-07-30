@@ -1,6 +1,4 @@
 import { useCurrentSession } from '@/entities/session'
-import { LogoutButton } from '@/features/auth-logout'
-import { Container } from '@/shared/ui'
 
 /**
  * Отображает защищённый дашборд текущего пользователя.
@@ -12,11 +10,11 @@ export function DashboardPage() {
   const { data: user } = useCurrentSession()
 
   return (
-    <Container as="main" className="min-h-screen py-6">
-      <header className="flex items-center justify-between gap-4">
-        <span className="min-w-0 truncate">{user.normalizedEmail}</span>
-        <LogoutButton />
-      </header>
-    </Container>
+    <section className="min-w-0 space-y-2">
+      <h1 className="text-2xl font-semibold">Обзор</h1>
+      <p className="min-w-0 [overflow-wrap:anywhere] text-muted-foreground">
+        Вы вошли как {user.normalizedEmail}
+      </p>
+    </section>
   )
 }

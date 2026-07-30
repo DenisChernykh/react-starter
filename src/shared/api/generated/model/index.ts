@@ -6,12 +6,19 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './approvalRequestResponseDto'
+export * from './approvalRequestResponseDtoStatus'
+export * from './approvalRequestsDecidePathParameters'
+export * from './approvalRequestsGetPathParameters'
 export * from './authMutationResponseDto'
 export * from './authRevokeSessionPathParameters'
 export * from './browserSessionResponseDto'
 export * from './changePasswordRequestDto'
+export * from './createApprovalRequestDto'
 export * from './csrfTokenResponseDto'
 export * from './currentUserResponseDto'
+export * from './decideApprovalRequestDto'
+export * from './decideApprovalRequestDtoDecision'
 export * from './issuedSessionResponseDto'
 export * from './livenessResponseDto'
 export * from './livenessResponseDtoStatus'
