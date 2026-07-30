@@ -9,6 +9,7 @@ const requiredVariableNames = [
   'GHCR_USERNAME',
   'GHCR_PASSWORD',
 ] as const
+const httpsOriginInputPattern = /^https:\/\/[^/?#\\\s]+\/?$/iu
 
 /** Проверенные process-only credentials и координаты live deployment. */
 export interface DeploymentLiveEnvironment {
@@ -22,6 +23,10 @@ export interface DeploymentLiveEnvironment {
 }
 
 function isHttpsOrigin(value: string): boolean {
+  if (!httpsOriginInputPattern.test(value)) {
+    return false
+  }
+
   try {
     const url = new URL(value)
     return (

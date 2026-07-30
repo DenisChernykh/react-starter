@@ -225,6 +225,16 @@ describe('parseDeploymentManifest', () => {
     ],
     ['public query', 'publicBaseUrl', 'https://stage.example.com?token=secret'],
     ['public fragment', 'publicBaseUrl', 'https://stage.example.com#secret'],
+    [
+      'public literal dot-segment path',
+      'publicBaseUrl',
+      'https://stage.example.com/release/..',
+    ],
+    [
+      'public percent-encoded dot-segment path',
+      'publicBaseUrl',
+      'https://stage.example.com/release/%2e%2e',
+    ],
   ])(
     'rejects %s without serializing rejected URL values',
     (_name, key, value) => {

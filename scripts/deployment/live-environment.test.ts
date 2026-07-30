@@ -85,6 +85,8 @@ describe('parseDeploymentLiveEnvironment', () => {
     'http://dokploy.example.com',
     'https://user:secret@dokploy.example.com',
     'https://dokploy.example.com/api',
+    'https://dokploy.example.com/api/..',
+    'https://dokploy.example.com/api/%2e%2e',
     'https://dokploy.example.com?token=secret',
     'https://dokploy.example.com#secret',
   ])('rejects invalid Dokploy origin without serializing %s', (value) => {

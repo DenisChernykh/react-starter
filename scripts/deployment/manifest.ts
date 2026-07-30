@@ -8,6 +8,7 @@ const repositoryPattern =
   /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/iu
 const revisionPattern = /^[0-9a-f]{40}$/u
 const smokePathPattern = /^\/(?!\/)[^\s?#]*$/u
+const httpsOriginInputPattern = /^https:\/\/[^/?#\\\s]+\/?$/iu
 const workflowPathPattern =
   /^\/([^/]+)\/([^/]+)\/actions\/runs\/[1-9][0-9]*\/attempts\/[1-9][0-9]*$/u
 /** Неизменяемая ссылка на exact OCI digest и соответствующую Git-ревизию. */
@@ -161,6 +162,11 @@ function validateWorkflowRunUrl(
 }
 
 function validatePublicBaseUrl(value: string, context: z.RefinementCtx): void {
+  if (!httpsOriginInputPattern.test(value)) {
+    addIssue(context, ['publicBaseUrl'], 'public_base_url_format')
+    return
+  }
+
   let url: URL
   try {
     url = new URL(value)
