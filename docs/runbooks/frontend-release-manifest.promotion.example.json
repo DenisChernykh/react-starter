@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "mode": "promotion",
+  "environment": "stage",
+  "repository": "example/react-starter",
+  "workflowRunUrl": "https://github.com/example/react-starter/actions/runs/123/attempts/1",
+  "publicBaseUrl": "https://stage.example.com",
+  "candidate": {
+    "imageRef": "ghcr.io/example/react-starter@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "expectedCurrent": {
+    "imageRef": "ghcr.io/example/react-starter@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "revision": "2222222222222222222222222222222222222222"
+  },
+  "smokePaths": [
+    "/login",
+    "/approval-requests/00000000-0000-4000-8000-000000000000"
+  ]
+}
