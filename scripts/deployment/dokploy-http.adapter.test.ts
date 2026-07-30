@@ -565,6 +565,53 @@ describe('DokployHttpAdapter', () => {
   })
 
   it.each([
+    [
+      'own',
+      () =>
+        Object.assign(new Error('unexpected redirect'), {
+          code: 'ECONNRESET',
+        }),
+    ],
+    [
+      'inherited',
+      () => {
+        const cause = new Error('unexpected redirect')
+        const codedPrototype = Object.create(Error.prototype, {
+          code: {
+            value: 'ECONNRESET',
+          },
+        }) as Error
+        Object.setPrototypeOf(cause, codedPrototype)
+        return cause
+      },
+    ],
+  ])(
+    'keeps a matching rejection with an %s cause code retryable as transport',
+    async (_codeLocation, createCause) => {
+      const codedTransportRejection = new TypeError('fetch failed', {
+        cause: createCause(),
+      })
+      const fake = recordingFetch(() => {
+        throw codedTransportRejection
+      })
+      const sleeper = noDelaySleep()
+
+      const error = await expectSafeContractFailure(
+        createAdapter(fake.fetch, sleeper.sleep).getApplication(applicationId),
+        ['fetch failed', 'unexpected redirect', 'ECONNRESET'],
+      )
+
+      expect(error).toMatchObject({
+        category: 'transport',
+        operation: 'application.one',
+      })
+      expect(error.status).toBeUndefined()
+      expect(fake.calls).toHaveLength(3)
+      expect(sleeper.delays).toEqual([250, 500])
+    },
+  )
+
+  it.each([
     'http://dokploy.example.test',
     'https://private-user:private-password@dokploy.example.test',
   ])('rejects an unsafe base URL before fetch: %s', async (unsafeBaseUrl) => {

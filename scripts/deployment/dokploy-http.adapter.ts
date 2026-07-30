@@ -186,8 +186,9 @@ function isRetryableReadError(error: DokployContractError): boolean {
  * @remarks
  * Node 24.18.0 включает Undici 7.28.0: `redirect: "error"` становится
  * `TypeError("fetch failed")` с обычным `Error("unexpected redirect")` в
- * `cause`. Проверка намеренно узкая: иная форма остаётся transport failure,
- * а исходные error/cause никогда не сохраняются в contract error.
+ * `cause` без собственного или унаследованного `code`. Проверка намеренно
+ * узкая: иная форма остаётся transport failure, а исходные error/cause никогда
+ * не сохраняются в contract error.
  */
 function isPinnedNodeRedirectRejection(error: unknown): boolean {
   return (
@@ -195,7 +196,8 @@ function isPinnedNodeRedirectRejection(error: unknown): boolean {
     error.message === 'fetch failed' &&
     error.cause instanceof Error &&
     error.cause.constructor === Error &&
-    error.cause.message === 'unexpected redirect'
+    error.cause.message === 'unexpected redirect' &&
+    !('code' in error.cause)
   )
 }
 
