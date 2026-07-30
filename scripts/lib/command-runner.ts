@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 
 const MAX_OUTPUT_BYTES = 1024 * 1024
+const TERMINATION_GRACE_MS = 200
 
 /** Результат завершившегося дочернего процесса с ограниченным выводом. */
 export interface CommandResult {
@@ -38,8 +39,9 @@ class CommandExecutionError extends Error {
  * Запускает один процесс через `spawn` с массивом аргументов и ограниченным выводом.
  *
  * @remarks
- * Тайм-аут и внешний abort завершают дочерний процесс. Текст ошибки намеренно не
- * содержит аргументы, stdin, environment или вывод процесса.
+ * Тайм-аут и внешний abort сначала отправляют `SIGTERM`, затем `SIGKILL` после
+ * короткого grace period и завершают Promise только после `close`. Текст ошибки
+ * намеренно не содержит аргументы, stdin, environment или вывод процесса.
  */
 export class ExecFileCommandRunner implements CommandPort {
   run(
@@ -62,32 +64,54 @@ export class ExecFileCommandRunner implements CommandPort {
       let stdoutBytes = 0
       let stderrBytes = 0
       let settled = false
+      let terminationCategory: string | undefined
+      let terminationTimer: NodeJS.Timeout | undefined
 
-      const finish = (
-        callback: () => void,
-        terminateChild = false,
-      ): undefined => {
+      const finish = (callback: () => void): undefined => {
         if (settled) {
           return
         }
 
         settled = true
         signal.removeEventListener('abort', onAbort)
-        if (terminateChild && child.exitCode === null) {
-          child.kill('SIGTERM')
+        if (terminationTimer !== undefined) {
+          clearTimeout(terminationTimer)
         }
         callback()
       }
 
-      const rejectWith = (category: string, terminateChild = false): void => {
-        finish(
-          () => reject(new CommandExecutionError(executable, category)),
-          terminateChild,
-        )
+      const rejectWith = (category: string): void => {
+        finish(() => reject(new CommandExecutionError(executable, category)))
+      }
+
+      const requestTermination = (category: string): void => {
+        if (settled || terminationCategory !== undefined) {
+          return
+        }
+
+        terminationCategory = category
+        if (
+          child.pid === undefined ||
+          child.exitCode !== null ||
+          child.signalCode !== null
+        ) {
+          return
+        }
+
+        child.kill('SIGTERM')
+        terminationTimer = setTimeout(() => {
+          if (
+            !settled &&
+            child.exitCode === null &&
+            child.signalCode === null
+          ) {
+            child.kill('SIGKILL')
+          }
+        }, TERMINATION_GRACE_MS)
       }
 
       const onAbort = (): void => {
-        rejectWith(timeoutSignal.aborted ? 'timeout' : 'abort', true)
+        requestTermination(timeoutSignal.aborted ? 'timeout' : 'abort')
       }
 
       const collect = (
@@ -98,7 +122,7 @@ export class ExecFileCommandRunner implements CommandPort {
       ): number => {
         const nextBytes = currentBytes + chunk.byteLength
         if (nextBytes > MAX_OUTPUT_BYTES) {
-          rejectWith(category, true)
+          requestTermination(category)
           return currentBytes
         }
 
@@ -106,13 +130,8 @@ export class ExecFileCommandRunner implements CommandPort {
         return nextBytes
       }
 
-      signal.addEventListener('abort', onAbort, { once: true })
-      if (signal.aborted) {
-        onAbort()
-      }
-
       child.on('error', () => {
-        rejectWith('spawn')
+        requestTermination('spawn')
       })
       child.stdout.on('data', (chunk: Buffer) => {
         stdoutBytes = collect(stdoutChunks, chunk, stdoutBytes, 'stdout-limit')
@@ -121,6 +140,10 @@ export class ExecFileCommandRunner implements CommandPort {
         stderrBytes = collect(stderrChunks, chunk, stderrBytes, 'stderr-limit')
       })
       child.on('close', (exitCode, exitSignal) => {
+        if (terminationCategory !== undefined) {
+          rejectWith(terminationCategory)
+          return
+        }
         if (exitCode === null) {
           rejectWith(exitSignal === null ? 'exit' : 'signal')
           return
@@ -134,6 +157,11 @@ export class ExecFileCommandRunner implements CommandPort {
           }),
         )
       })
+
+      signal.addEventListener('abort', onAbort, { once: true })
+      if (signal.aborted) {
+        onAbort()
+      }
 
       child.stdin.on('error', () => undefined)
       child.stdin.end(options.stdin)

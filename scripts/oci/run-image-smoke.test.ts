@@ -33,6 +33,16 @@ describe('parseOciSmokeOptions', () => {
     })
   })
 
+  it('keeps source and workflow equality expectations optional', () => {
+    expect(
+      parseOciSmokeOptions(['--image', digestImage, '--revision', revision]),
+    ).toEqual({
+      buildLocal: false,
+      expectedRevision: revision,
+      imageRef: digestImage,
+    })
+  })
+
   it.each([
     {
       name: 'mutable tag',

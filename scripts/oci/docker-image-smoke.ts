@@ -10,6 +10,18 @@ import { verifyFrontendHttpContract } from './frontend-http-contract.ts'
 const COMMAND_TIMEOUT_MS = 30_000
 const READINESS_TIMEOUT_MS = 20_000
 const REQUEST_TIMEOUT_MS = 5_000
+const REVISION_PATTERN = /^[a-f0-9]{40}$/u
+const RETRYABLE_NETWORK_ERROR_CODES = new Set([
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_SOCKET',
+])
 
 /** Ожидания для smoke-проверки одного Docker image. */
 export interface DockerImageSmokeInput {
@@ -83,25 +95,47 @@ function requireImageMetadata(
   }
 
   const labels = config.Labels
+  const revision = labels['org.opencontainers.image.revision']
+  const created = labels['org.opencontainers.image.created']
+  const source = labels['org.opencontainers.image.source']
+  const workflowRunUrl = labels['io.github.actions.workflow-run-url']
   if (
-    labels['org.opencontainers.image.revision'] !== input.expectedRevision ||
-    typeof labels['org.opencontainers.image.created'] !== 'string' ||
-    labels['org.opencontainers.image.created'] === ''
+    typeof revision !== 'string' ||
+    !REVISION_PATTERN.test(revision) ||
+    revision !== input.expectedRevision ||
+    typeof created !== 'string' ||
+    created === '' ||
+    Number.isNaN(Date.parse(created)) ||
+    typeof source !== 'string' ||
+    !isSafeHttpsUrl(source) ||
+    typeof workflowRunUrl !== 'string' ||
+    !isSafeHttpsUrl(workflowRunUrl)
   ) {
     throw new DockerImageSmokeError('OCI labels')
   }
-  if (
-    input.expectedSource !== undefined &&
-    labels['org.opencontainers.image.source'] !== input.expectedSource
-  ) {
+  if (input.expectedSource !== undefined && source !== input.expectedSource) {
     throw new DockerImageSmokeError('OCI labels')
   }
   if (
     input.expectedWorkflowRunUrl !== undefined &&
-    labels['io.github.actions.workflow-run-url'] !==
-      input.expectedWorkflowRunUrl
+    workflowRunUrl !== input.expectedWorkflowRunUrl
   ) {
     throw new DockerImageSmokeError('OCI labels')
+  }
+}
+
+function isSafeHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return (
+      url.protocol === 'https:' &&
+      url.username === '' &&
+      url.password === '' &&
+      url.search === '' &&
+      url.hash === ''
+    )
+  } catch {
+    return false
   }
 }
 
@@ -115,6 +149,48 @@ function parsePublishedPort(stdout: string): number {
   return port
 }
 
+/**
+ * Отличает ожидаемую недоступность ещё не готового HTTP listener от ошибок кода.
+ */
+function isRetryableReadinessError(
+  error: unknown,
+  timeoutSignal: AbortSignal,
+): boolean {
+  if (
+    timeoutSignal.aborted ||
+    (error instanceof DOMException && error.name === 'TimeoutError')
+  ) {
+    return true
+  }
+
+  const pending: unknown[] = [error]
+  const visited = new Set<unknown>()
+  while (pending.length > 0) {
+    const candidate = pending.pop()
+    if (candidate === undefined || visited.has(candidate)) {
+      continue
+    }
+    visited.add(candidate)
+
+    if (isRecord(candidate)) {
+      if (
+        typeof candidate.code === 'string' &&
+        RETRYABLE_NETWORK_ERROR_CODES.has(candidate.code)
+      ) {
+        return true
+      }
+      if (candidate.cause !== undefined) {
+        pending.push(candidate.cause)
+      }
+    }
+    if (candidate instanceof AggregateError) {
+      pending.push(...candidate.errors)
+    }
+  }
+
+  return false
+}
+
 async function waitForHttpReadiness(
   baseUrl: URL,
   fetchImplementation: typeof fetch,
@@ -123,19 +199,24 @@ async function waitForHttpReadiness(
 
   while (Date.now() < deadline) {
     const remainingMs = deadline - Date.now()
+    const timeoutSignal = AbortSignal.timeout(
+      Math.min(REQUEST_TIMEOUT_MS, remainingMs),
+    )
     try {
       const response = await fetchImplementation(
         new URL('/_frontend/health', baseUrl),
         {
-          redirect: 'error',
-          signal: AbortSignal.timeout(
-            Math.min(REQUEST_TIMEOUT_MS, remainingMs),
-          ),
+          redirect: 'manual',
+          signal: timeoutSignal,
         },
       )
-      await response.arrayBuffer()
+      void response.arrayBuffer().catch(() => undefined)
       return
-    } catch {
+    } catch (error) {
+      if (!isRetryableReadinessError(error, timeoutSignal)) {
+        throw error
+      }
+
       const delayMs = Math.min(200, deadline - Date.now())
       if (delayMs > 0) {
         await delay(delayMs)

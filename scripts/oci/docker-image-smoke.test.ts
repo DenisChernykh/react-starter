@@ -265,6 +265,143 @@ describe('smokeDockerImage', () => {
     ])
   })
 
+  it.each([
+    {
+      name: 'missing source label without a caller expectation',
+      labels: {
+        'io.github.actions.workflow-run-url': expectedWorkflowRunUrl,
+        'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+        'org.opencontainers.image.revision': expectedRevision,
+      },
+    },
+    {
+      name: 'missing workflow label without a caller expectation',
+      labels: {
+        'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+        'org.opencontainers.image.revision': expectedRevision,
+        'org.opencontainers.image.source': expectedSource,
+      },
+    },
+    {
+      name: 'an invalid source label without a caller expectation',
+      labels: {
+        'io.github.actions.workflow-run-url': expectedWorkflowRunUrl,
+        'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+        'org.opencontainers.image.revision': expectedRevision,
+        'org.opencontainers.image.source': 'not-a-url',
+      },
+    },
+  ])('rejects $name before docker run', async ({ labels }) => {
+    const commands = new FakeCommandPort(
+      imageInspect({ labels: labels as Record<string, string> }),
+    )
+
+    await expect(
+      smokeDockerImage(
+        { expectedRevision, imageRef },
+        {
+          commands,
+          fetchImplementation: healthyFetch(),
+        },
+      ),
+    ).rejects.toMatchObject({ name: 'DockerImageSmokeError' })
+
+    expect(commands.calls).toHaveLength(1)
+    expect(commands.calls[0]?.arguments_.slice(0, 2)).toEqual([
+      'image',
+      'inspect',
+    ])
+  })
+
+  it('accepts the required provenance quartet with inherited base labels', async () => {
+    const commands = new FakeCommandPort(
+      imageInspect({
+        labels: {
+          'io.github.actions.workflow-run-url': expectedWorkflowRunUrl,
+          maintainer: 'NGINX Docker Maintainers',
+          'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+          'org.opencontainers.image.description': 'Unprivileged NGINX image',
+          'org.opencontainers.image.licenses': 'BSD-2-Clause',
+          'org.opencontainers.image.revision': expectedRevision,
+          'org.opencontainers.image.source': expectedSource,
+          'org.opencontainers.image.title': 'NGINX Unprivileged',
+          'org.opencontainers.image.url':
+            'https://github.com/nginx/docker-nginx-unprivileged',
+          'org.opencontainers.image.version': '1.29.5',
+        },
+      }),
+    )
+
+    await expect(
+      smokeDockerImage(
+        { expectedRevision, imageRef },
+        {
+          commands,
+          fetchImplementation: healthyFetch(),
+        },
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(commands.calls.map(({ arguments_ }) => arguments_[0])).toEqual([
+      'image',
+      'run',
+      'port',
+      'stop',
+      'inspect',
+      'rm',
+    ])
+  })
+
+  it.each([
+    {
+      name: 'an invalid created label',
+      expectedRevision,
+      labels: {
+        'io.github.actions.workflow-run-url': expectedWorkflowRunUrl,
+        'org.opencontainers.image.created': 'not-a-date',
+        'org.opencontainers.image.revision': expectedRevision,
+        'org.opencontainers.image.source': expectedSource,
+      },
+    },
+    {
+      name: 'an invalid workflow label',
+      expectedRevision,
+      labels: {
+        'io.github.actions.workflow-run-url': 'not-a-url',
+        'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+        'org.opencontainers.image.revision': expectedRevision,
+        'org.opencontainers.image.source': expectedSource,
+      },
+    },
+    {
+      name: 'an invalid revision label',
+      expectedRevision: 'not-a-revision',
+      labels: {
+        'io.github.actions.workflow-run-url': expectedWorkflowRunUrl,
+        'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+        'org.opencontainers.image.revision': 'not-a-revision',
+        'org.opencontainers.image.source': expectedSource,
+      },
+    },
+  ])(
+    'rejects $name before docker run',
+    async ({ expectedRevision: expectedRevision_, labels }) => {
+      const commands = new FakeCommandPort(imageInspect({ labels }))
+
+      await expect(
+        smokeDockerImage(
+          { expectedRevision: expectedRevision_, imageRef },
+          {
+            commands,
+            fetchImplementation: healthyFetch(),
+          },
+        ),
+      ).rejects.toMatchObject({ name: 'DockerImageSmokeError' })
+
+      expect(commands.calls).toHaveLength(1)
+    },
+  )
+
   it('removes its container when the HTTP contract fails without removing the image', async () => {
     const commands = new FakeCommandPort()
     const invalidHealth = new Map([
@@ -293,5 +430,86 @@ describe('smokeDockerImage', () => {
         arguments_.join(' ').startsWith('image rm'),
       ),
     ).toBe(false)
+  })
+
+  it('does not retry an injected programming error during readiness', async () => {
+    const commands = new FakeCommandPort()
+    const programmingError = new Error('injected programming failure')
+    let fetchCalls = 0
+    const fetchImplementation = (async () => {
+      fetchCalls += 1
+      if (fetchCalls === 1) {
+        throw programmingError
+      }
+
+      return httpResponse('ok\n', 200, {
+        'cache-control': 'no-store',
+        'content-type': 'text/plain',
+      })
+    }) as typeof fetch
+
+    await expect(
+      smokeDockerImage(input, { commands, fetchImplementation }),
+    ).rejects.toBe(programmingError)
+
+    expect(fetchCalls).toBe(1)
+    expect(commands.calls.at(-1)?.arguments_.slice(0, 2)).toEqual([
+      'rm',
+      '--force',
+    ])
+  })
+
+  it('treats a manual redirect as reachable and leaves rejection to the full verifier', async () => {
+    const commands = new FakeCommandPort()
+    const redirectModes: Array<RequestInit['redirect']> = []
+    const fetchImplementation = (async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      redirectModes.push(init?.redirect)
+      return httpResponse('', 302, { location: '/login' })
+    }) as typeof fetch
+
+    await expect(
+      smokeDockerImage(input, { commands, fetchImplementation }),
+    ).rejects.toMatchObject({ name: 'FrontendHttpContractError' })
+
+    expect(redirectModes).toEqual(['manual', 'error'])
+  })
+
+  it.each([
+    {
+      name: 'connection refusal',
+      error: new TypeError('fetch failed', {
+        cause: Object.assign(new Error('connection refused'), {
+          code: 'ECONNREFUSED',
+        }),
+      }),
+    },
+    {
+      name: 'request timeout',
+      error: new DOMException('request timed out', 'TimeoutError'),
+    },
+  ])('retries a recognized $name during readiness', async ({ error }) => {
+    const commands = new FakeCommandPort()
+    const delegate = healthyFetch()
+    let fetchCalls = 0
+    const fetchImplementation = (async (
+      input_: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      fetchCalls += 1
+      if (fetchCalls === 1) {
+        throw error
+      }
+
+      return delegate(input_, init)
+    }) as typeof fetch
+
+    await expect(
+      smokeDockerImage(input, { commands, fetchImplementation }),
+    ).resolves.toBeUndefined()
+
+    expect(fetchCalls).toBe(9)
   })
 })
