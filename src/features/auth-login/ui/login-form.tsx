@@ -1,12 +1,11 @@
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 
 import {
   ApiProblemError,
   authLoginSchema,
   type LoginRequestDto,
 } from '@/shared/api'
+import { useZodForm } from '@/shared/lib/form'
 import {
   Alert,
   AlertDescription,
@@ -40,9 +39,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
     handleSubmit,
     register,
     setError,
-  } = useForm<LoginRequestDto>({
-    resolver: zodResolver(authLoginSchema),
-  })
+  } = useZodForm(authLoginSchema)
   const emailError = errors.email?.message
   const passwordError = errors.password?.message
 
