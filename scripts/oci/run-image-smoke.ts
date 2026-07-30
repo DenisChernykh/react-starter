@@ -7,6 +7,7 @@ import {
   type CommandResult,
 } from '../lib/command-runner.ts'
 import {
+  isSafeDockerImageSmokeFailure,
   smokeDockerImage,
   type DockerImageSmokeInput,
 } from './docker-image-smoke.ts'
@@ -289,7 +290,9 @@ export async function runLocalImageSmoke(commands: CommandPort): Promise<void> {
     const primaryFailure =
       primaryError instanceof OciSmokeExecutionError
         ? primaryError
-        : new OciSmokeExecutionError('primary operation')
+        : isSafeDockerImageSmokeFailure(primaryError)
+          ? primaryError
+          : new OciSmokeExecutionError('primary operation')
     throw new AggregateError(
       [primaryFailure, cleanupError],
       'OCI smoke execution failed: primary operation and local image cleanup',

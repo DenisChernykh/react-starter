@@ -38,6 +38,74 @@ class DualFailureCommandPort implements CommandPort {
   }
 }
 
+class SmokeAndCleanupFailureCommandPort implements CommandPort {
+  private readonly nestedSmokeFailure: boolean
+
+  constructor(nestedSmokeFailure: boolean) {
+    this.nestedSmokeFailure = nestedSmokeFailure
+  }
+
+  run(
+    _executable: string,
+    arguments_: readonly string[],
+  ): Promise<CommandResult> {
+    if (arguments_[0] === 'rev-parse') {
+      return Promise.resolve(commandResult(`${revision}\n`))
+    }
+    if (arguments_[0] === 'show') {
+      return Promise.resolve(commandResult('2026-07-30T12:00:00Z\n'))
+    }
+    if (arguments_[0] === 'config') {
+      return Promise.resolve(
+        commandResult('https://github.com/example/react-starter.git\n'),
+      )
+    }
+    if (arguments_[0] === 'build') {
+      return Promise.resolve(commandResult())
+    }
+    if (arguments_[0] === 'image' && arguments_[1] === 'inspect') {
+      if (!this.nestedSmokeFailure) {
+        return Promise.resolve(commandResult('', 17, 'docker-private-output'))
+      }
+
+      return Promise.resolve(
+        commandResult(
+          JSON.stringify([
+            {
+              Config: {
+                User: '101',
+                ExposedPorts: { '8080/tcp': {} },
+                Labels: {
+                  'io.github.actions.workflow-run-url':
+                    'https://github.com/local/react-starter/actions/runs/0/attempts/0',
+                  'org.opencontainers.image.created': '2026-07-30T12:00:00Z',
+                  'org.opencontainers.image.revision': revision,
+                  'org.opencontainers.image.source':
+                    'https://github.com/example/react-starter',
+                },
+              },
+            },
+          ]),
+        ),
+      )
+    }
+    if (arguments_[0] === 'run') {
+      return Promise.resolve(commandResult('container-id\n'))
+    }
+    if (arguments_[0] === 'port') {
+      return Promise.resolve(commandResult('', 18, 'docker-private-output'))
+    }
+    if (arguments_[0] === 'rm') {
+      return Promise.resolve(commandResult('', 19, 'docker-private-output'))
+    }
+    if (arguments_[0] === 'image' && arguments_[1] === 'rm') {
+      return Promise.resolve(commandResult('', 20, 'docker-private-output'))
+    }
+
+    return Promise.resolve(commandResult('', 99, 'unexpected-private-output'))
+  }
+}
+
 describe('parseOciSmokeOptions', () => {
   it('selects an owned local build when no arguments are supplied', () => {
     expect(parseOciSmokeOptions([])).toMatchObject({ buildLocal: true })
@@ -174,6 +242,60 @@ describe('runLocalImageSmoke', () => {
     ])
     expect(
       (thrown as AggregateError).errors.map(String).join('\n'),
+    ).not.toContain('private-output')
+  })
+
+  it('retains a fixed smoke category when smoke and local image cleanup fail', async () => {
+    let thrown: unknown
+
+    try {
+      await runLocalImageSmoke(new SmokeAndCleanupFailureCommandPort(false))
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(AggregateError)
+    expect((thrown as AggregateError).errors).toEqual([
+      expect.objectContaining({
+        message: 'Docker image smoke failed: image inspect',
+      }),
+      expect.objectContaining({
+        message: 'OCI smoke execution failed: local image cleanup',
+      }),
+    ])
+    expect(
+      (thrown as AggregateError).errors.map(String).join('\n'),
+    ).not.toContain('private-output')
+  })
+
+  it('retains a safe nested smoke aggregate when both cleanup layers fail', async () => {
+    let thrown: unknown
+
+    try {
+      await runLocalImageSmoke(new SmokeAndCleanupFailureCommandPort(true))
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(AggregateError)
+    const outerErrors = (thrown as AggregateError).errors
+    expect(outerErrors[0]).toBeInstanceOf(AggregateError)
+    expect((outerErrors[0] as AggregateError).errors).toEqual([
+      expect.objectContaining({
+        message: 'Docker image smoke failed: container port',
+      }),
+      expect.objectContaining({
+        message: 'Docker image smoke failed: container cleanup',
+      }),
+    ])
+    expect(outerErrors[1]).toMatchObject({
+      message: 'OCI smoke execution failed: local image cleanup',
+    })
+    expect(
+      [
+        ...outerErrors.map(String),
+        ...(outerErrors[0] as AggregateError).errors.map(String),
+      ].join('\n'),
     ).not.toContain('private-output')
   })
 })

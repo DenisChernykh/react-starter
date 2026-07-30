@@ -40,6 +40,28 @@ class DockerImageSmokeError extends Error {
   }
 }
 
+/**
+ * Проверяет, что ошибка содержит только фиксированные категории image smoke.
+ *
+ * @remarks
+ * Предикат распознаёт экземпляры закрытого класса этого модуля и созданную
+ * здесь составную ошибку из двух таких экземпляров. Произвольные ошибки
+ * вызывающего кода не считаются безопасными для вывода.
+ */
+export function isSafeDockerImageSmokeFailure(error: unknown): error is Error {
+  if (error instanceof DockerImageSmokeError) {
+    return true
+  }
+
+  return (
+    error instanceof AggregateError &&
+    error.message ===
+      'Docker image smoke failed: primary operation and container cleanup' &&
+    error.errors.length === 2 &&
+    error.errors.every((failure) => failure instanceof DockerImageSmokeError)
+  )
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
