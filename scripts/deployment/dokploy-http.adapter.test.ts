@@ -533,10 +533,33 @@ describe('DokployHttpAdapter', () => {
     )
 
     expect(error).toMatchObject({
-      category: 'response_status',
+      category: 'response_redirect',
       operation: 'application.one',
       status: 302,
     })
+    expect(fake.calls).toHaveLength(1)
+    expect(sleeper.delays).toEqual([])
+  })
+
+  it('does not retry the pinned Node 24 native redirect rejection', async () => {
+    const nativeRedirectRejection = new TypeError('fetch failed', {
+      cause: new Error('unexpected redirect'),
+    })
+    const fake = recordingFetch(() => {
+      throw nativeRedirectRejection
+    })
+    const sleeper = noDelaySleep()
+
+    const error = await expectSafeContractFailure(
+      createAdapter(fake.fetch, sleeper.sleep).getApplication(applicationId),
+      ['fetch failed', 'unexpected redirect'],
+    )
+
+    expect(error).toMatchObject({
+      category: 'response_redirect',
+      operation: 'application.one',
+    })
+    expect(error.status).toBeUndefined()
     expect(fake.calls).toHaveLength(1)
     expect(sleeper.delays).toEqual([])
   })

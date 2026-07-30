@@ -20,6 +20,7 @@ type DokployErrorCategory =
   | 'request_aborted'
   | 'request_timeout'
   | 'transport'
+  | 'response_redirect'
   | 'response_status'
   | 'response_json'
   | 'response_shape'
@@ -176,6 +177,25 @@ function isRetryableReadError(error: DokployContractError): boolean {
       error.status !== undefined &&
       error.status >= 500 &&
       error.status <= 599)
+  )
+}
+
+/**
+ * Узнаёт точный redirect fingerprint встроенного fetch закреплённого Node.
+ *
+ * @remarks
+ * Node 24.18.0 включает Undici 7.28.0: `redirect: "error"` становится
+ * `TypeError("fetch failed")` с обычным `Error("unexpected redirect")` в
+ * `cause`. Проверка намеренно узкая: иная форма остаётся transport failure,
+ * а исходные error/cause никогда не сохраняются в contract error.
+ */
+function isPinnedNodeRedirectRejection(error: unknown): boolean {
+  return (
+    error instanceof TypeError &&
+    error.message === 'fetch failed' &&
+    error.cause instanceof Error &&
+    error.cause.constructor === Error &&
+    error.cause.message === 'unexpected redirect'
   )
 }
 
@@ -350,12 +370,15 @@ export class DokployHttpAdapter implements DokployPort {
         redirect: 'error',
         signal: requestSignal,
       })
-    } catch {
+    } catch (error) {
       if (signal?.aborted) {
         throw new DokployContractError(operation, 'request_aborted')
       }
       if (timeoutSignal.aborted) {
         throw new DokployContractError(operation, 'request_timeout')
+      }
+      if (isPinnedNodeRedirectRejection(error)) {
+        throw new DokployContractError(operation, 'response_redirect')
       }
       throw new DokployContractError(operation, 'transport')
     }
@@ -364,7 +387,9 @@ export class DokployHttpAdapter implements DokployPort {
       void response.body?.cancel().catch(() => undefined)
       throw new DokployContractError(
         operation,
-        'response_status',
+        response.status >= 300 && response.status <= 399
+          ? 'response_redirect'
+          : 'response_status',
         response.status,
       )
     }
