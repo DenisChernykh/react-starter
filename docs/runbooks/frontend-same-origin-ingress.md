@@ -15,17 +15,20 @@ image. Этот runbook описывает контракт для будуще�
 ## Обязательная path-routing table
 
 ```text
-public host /v1/* and /health/*  → backend
-public host all remaining paths → public frontend:8080
-admin host /v1/* and /health/*   → backend
-admin host all remaining paths  → admin frontend:8080
-api host all paths               → backend
+public host /v1, /v1/*, /health, /health/* → backend
+public host all remaining paths            → public frontend:8080
+admin host /v1, /v1/*, /health, /health/*  → backend
+admin host all remaining paths             → admin frontend:8080
+api host all paths                          → backend
 ```
 
 Path router имеет приоритет над frontend fallback. Сначала сопоставьте
-`/v1/*` и `/health/*` с backend, затем направьте оставшиеся public/admin paths
-в соответствующий frontend. Не отправляйте `api` host во frontend: это
-отдельный backend-only host.
+точный `/v1` или его slash descendants `/v1/*`, а также точный `/health` или
+его slash descendants `/health/*` с backend, затем направьте оставшиеся
+public/admin paths в соответствующий frontend. Prefix collisions `/v10`,
+`/v1-admin` и `/healthcheck` не являются backend routes и должны оставаться во
+frontend. Не отправляйте `api` host во frontend: это отдельный backend-only
+host.
 
 ```text
 browser /v1/auth/me
@@ -39,8 +42,9 @@ browser /approval-requests
 → SPA fallback /index.html
 ```
 
-Frontend image намеренно отвечает non-HTML `404` на `/v1/*` и `/health/*`.
-Это защищает от случайного SPA fallback, но не заменяет ingress routing.
+Frontend image намеренно отвечает non-HTML `404` на точные `/v1`, `/health` и
+их slash descendants. Это защищает от случайного SPA fallback, но не заменяет
+ingress routing.
 
 ## Health и misrouting probes
 

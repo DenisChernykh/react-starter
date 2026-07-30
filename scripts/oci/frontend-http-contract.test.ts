@@ -6,6 +6,7 @@ import { verifyFrontendHttpContract } from './frontend-http-contract.ts'
 const approvalRequestPath =
   '/approval-requests/00000000-0000-4000-8000-000000000001'
 const assetPath = '/assets/index-a1b2c3d4.js'
+const unversionedAssetPath = '/favicon.svg'
 const html = `<html><body><div id="root"></div><script src="${assetPath}"></script></body></html>`
 
 function response(
@@ -17,6 +18,7 @@ function response(
     ...init,
     headers: {
       'referrer-policy': 'no-referrer',
+      server: 'nginx',
       'x-content-type-options': 'nosniff',
       'x-frame-options': 'DENY',
       ...extraHeaders,
@@ -37,15 +39,41 @@ function successfulResponses(): Map<string, Response> {
         },
       ),
     ],
-    ['/', response(html, { status: 200 }, { 'content-type': 'text/html' })],
+    [
+      '/',
+      response(
+        html,
+        { status: 200 },
+        { 'cache-control': 'no-cache', 'content-type': 'text/html' },
+      ),
+    ],
     [
       '/login',
-      response(html, { status: 200 }, { 'content-type': 'text/html' }),
+      response(
+        html,
+        { status: 200 },
+        { 'cache-control': 'no-cache', 'content-type': 'text/html' },
+      ),
     ],
     [
       approvalRequestPath,
-      response(html, { status: 200 }, { 'content-type': 'text/html' }),
+      response(
+        html,
+        { status: 200 },
+        { 'cache-control': 'no-cache', 'content-type': 'text/html' },
+      ),
     ],
+    ...['/v10', '/v1-admin', '/healthcheck'].map(
+      (path) =>
+        [
+          path,
+          response(
+            html,
+            { status: 200 },
+            { 'cache-control': 'no-cache', 'content-type': 'text/html' },
+          ),
+        ] as const,
+    ),
     [
       assetPath,
       response(
@@ -58,7 +86,26 @@ function successfulResponses(): Map<string, Response> {
       ),
     ],
     [
+      unversionedAssetPath,
+      response(
+        '<svg/>',
+        { status: 200 },
+        {
+          'cache-control': 'no-cache',
+          'content-type': 'image/svg+xml',
+        },
+      ),
+    ],
+    [
+      '/v1',
+      response('Not Found', { status: 404 }, { 'content-type': 'text/plain' }),
+    ],
+    [
       '/v1/__frontend_deployment_probe__',
+      response('Not Found', { status: 404 }, { 'content-type': 'text/plain' }),
+    ],
+    [
+      '/health',
       response('Not Found', { status: 404 }, { 'content-type': 'text/plain' }),
     ],
     [
@@ -104,8 +151,14 @@ describe('verifyFrontendHttpContract', () => {
       '/login',
       approvalRequestPath,
       assetPath,
+      unversionedAssetPath,
+      '/v1',
       '/v1/__frontend_deployment_probe__',
+      '/health',
       '/health/unknown',
+      '/v10',
+      '/v1-admin',
+      '/healthcheck',
     ])
     expect(
       requests.every(
@@ -116,6 +169,31 @@ describe('verifyFrontendHttpContract', () => {
   })
 
   it.each([
+    {
+      name: 'HTML cache header',
+      path: '/',
+      replacement: response(
+        html,
+        { status: 200 },
+        {
+          'cache-control': 'public, max-age=31536000, immutable',
+          'content-type': 'text/html',
+        },
+      ),
+    },
+    {
+      name: 'server version disclosure',
+      path: '/',
+      replacement: response(
+        html,
+        { status: 200 },
+        {
+          'cache-control': 'no-cache',
+          'content-type': 'text/html',
+          server: 'nginx/1.29.5',
+        },
+      ),
+    },
     {
       name: 'health body',
       path: '/_frontend/health',
@@ -178,6 +256,18 @@ describe('verifyFrontendHttpContract', () => {
           'cache-control':
             'max-age=31536000, public, max-age=31536000, immutable',
           'content-type': 'text/javascript',
+        },
+      ),
+    },
+    {
+      name: 'unversioned public asset cache header',
+      path: unversionedAssetPath,
+      replacement: response(
+        '<svg/>',
+        { status: 200 },
+        {
+          'cache-control': 'public, max-age=31536000, immutable',
+          'content-type': 'image/svg+xml',
         },
       ),
     },

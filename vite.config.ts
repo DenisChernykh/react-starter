@@ -38,8 +38,8 @@ export default defineConfig(({ command, mode }) => {
 
           return {
             proxy: {
-              '/v1': { target, changeOrigin: true },
-              '/health': { target, changeOrigin: true },
+              '^/v1(?:/|$)': { target, changeOrigin: true },
+              '^/health(?:/|$)': { target, changeOrigin: true },
             },
           }
         })()

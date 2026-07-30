@@ -14,6 +14,7 @@ const expectedSource = 'https://github.com/example/react-starter'
 const expectedWorkflowRunUrl =
   'https://github.com/example/react-starter/actions/runs/1/attempts/1'
 const assetPath = '/assets/index-a1b2c3d4.js'
+const unversionedAssetPath = '/favicon.svg'
 const appHtml = `<div id="root"></div><script src="${assetPath}"></script>`
 
 interface RecordedCall {
@@ -96,6 +97,7 @@ function httpResponse(
     status,
     headers: {
       'referrer-policy': 'no-referrer',
+      server: 'nginx',
       'x-content-type-options': 'nosniff',
       'x-frame-options': 'DENY',
       ...extraHeaders,
@@ -112,12 +114,37 @@ function healthyFetch(overrides = new Map<string, Response>()): typeof fetch {
         'content-type': 'text/plain',
       }),
     ],
-    ['/', httpResponse(appHtml, 200, { 'content-type': 'text/html' })],
-    ['/login', httpResponse(appHtml, 200, { 'content-type': 'text/html' })],
+    [
+      '/',
+      httpResponse(appHtml, 200, {
+        'cache-control': 'no-cache',
+        'content-type': 'text/html',
+      }),
+    ],
+    [
+      '/login',
+      httpResponse(appHtml, 200, {
+        'cache-control': 'no-cache',
+        'content-type': 'text/html',
+      }),
+    ],
     [
       '/approval-requests/00000000-0000-4000-8000-000000000001',
-      httpResponse(appHtml, 200, { 'content-type': 'text/html' }),
+      httpResponse(appHtml, 200, {
+        'cache-control': 'no-cache',
+        'content-type': 'text/html',
+      }),
     ],
+    ...['/v10', '/v1-admin', '/healthcheck'].map(
+      (path) =>
+        [
+          path,
+          httpResponse(appHtml, 200, {
+            'cache-control': 'no-cache',
+            'content-type': 'text/html',
+          }),
+        ] as const,
+    ),
     [
       assetPath,
       httpResponse('asset', 200, {
@@ -126,7 +153,19 @@ function healthyFetch(overrides = new Map<string, Response>()): typeof fetch {
       }),
     ],
     [
+      unversionedAssetPath,
+      httpResponse('<svg/>', 200, {
+        'cache-control': 'no-cache',
+        'content-type': 'image/svg+xml',
+      }),
+    ],
+    ['/v1', httpResponse('Not Found', 404, { 'content-type': 'text/plain' })],
+    [
       '/v1/__frontend_deployment_probe__',
+      httpResponse('Not Found', 404, { 'content-type': 'text/plain' }),
+    ],
+    [
+      '/health',
       httpResponse('Not Found', 404, { 'content-type': 'text/plain' }),
     ],
     [
@@ -363,6 +402,22 @@ describe('smokeDockerImage', () => {
         'org.opencontainers.image.source': expectedSource,
       },
     },
+    ...[
+      '2026-07-30',
+      '2026-07-30 12:00:00Z',
+      '2026-07-30T12:00:00',
+      '2026-02-30T12:00:00Z',
+      '2026-07-30T12:00:00+24:00',
+    ].map((created) => ({
+      name: `a non-RFC3339 created label: ${created}`,
+      expectedRevision,
+      labels: {
+        'io.github.actions.workflow-run-url': expectedWorkflowRunUrl,
+        'org.opencontainers.image.created': created,
+        'org.opencontainers.image.revision': expectedRevision,
+        'org.opencontainers.image.source': expectedSource,
+      },
+    })),
     {
       name: 'an invalid workflow label',
       expectedRevision,
@@ -430,6 +485,52 @@ describe('smokeDockerImage', () => {
         arguments_.join(' ').startsWith('image rm'),
       ),
     ).toBe(false)
+  })
+
+  it('retains fixed primary and cleanup categories when both fail', async () => {
+    const privateValue = 'docker-private-output'
+    const delegate = new FakeCommandPort()
+    const commands: CommandPort = {
+      async run(executable, arguments_, options) {
+        const result = await delegate.run(executable, arguments_, options)
+        if (arguments_[0] === 'port') {
+          return commandResult('', 17, privateValue)
+        }
+        if (arguments_[0] === 'rm') {
+          return commandResult('', 18, privateValue)
+        }
+
+        return result
+      },
+    }
+    let thrown: unknown
+
+    try {
+      await smokeDockerImage(input, {
+        commands,
+        fetchImplementation: healthyFetch(),
+      })
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(AggregateError)
+    expect(thrown).toMatchObject({
+      message:
+        'Docker image smoke failed: primary operation and container cleanup',
+      name: 'AggregateError',
+    })
+    expect((thrown as AggregateError).errors).toEqual([
+      expect.objectContaining({
+        message: 'Docker image smoke failed: container port',
+      }),
+      expect.objectContaining({
+        message: 'Docker image smoke failed: container cleanup',
+      }),
+    ])
+    expect(
+      (thrown as AggregateError).errors.map(String).join('\n'),
+    ).not.toContain(privateValue)
   })
 
   it('does not retry an injected programming error during readiness', async () => {
@@ -510,6 +611,6 @@ describe('smokeDockerImage', () => {
       smokeDockerImage(input, { commands, fetchImplementation }),
     ).resolves.toBeUndefined()
 
-    expect(fetchCalls).toBe(9)
+    expect(fetchCalls).toBe(15)
   })
 })

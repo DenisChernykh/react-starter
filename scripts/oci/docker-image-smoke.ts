@@ -11,6 +11,8 @@ const COMMAND_TIMEOUT_MS = 30_000
 const READINESS_TIMEOUT_MS = 20_000
 const REQUEST_TIMEOUT_MS = 5_000
 const REVISION_PATTERN = /^[a-f0-9]{40}$/u
+const RFC3339_INSTANT_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/u
 const RETRYABLE_NETWORK_ERROR_CODES = new Set([
   'EAI_AGAIN',
   'ECONNREFUSED',
@@ -40,6 +42,57 @@ class DockerImageSmokeError extends Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** Проверяет синтаксис RFC3339, календарную дату, timezone и существующий instant. */
+function isRfc3339Instant(value: string): boolean {
+  const match = RFC3339_INSTANT_PATTERN.exec(value)
+  if (!match) {
+    return false
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const hour = Number(match[4])
+  const minute = Number(match[5])
+  const second = Number(match[6])
+  const timezone = match[7]
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+  const daysInMonth = [
+    31,
+    leapYear ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ][month - 1]
+  if (
+    daysInMonth === undefined ||
+    day < 1 ||
+    day > daysInMonth ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  ) {
+    return false
+  }
+
+  if (timezone !== 'Z') {
+    const timezoneHour = Number(timezone.slice(1, 3))
+    const timezoneMinute = Number(timezone.slice(4, 6))
+    if (timezoneHour > 23 || timezoneMinute > 59) {
+      return false
+    }
+  }
+
+  return !Number.isNaN(Date.parse(value))
 }
 
 function requireSuccessfulCommand(
@@ -104,8 +157,7 @@ function requireImageMetadata(
     !REVISION_PATTERN.test(revision) ||
     revision !== input.expectedRevision ||
     typeof created !== 'string' ||
-    created === '' ||
-    Number.isNaN(Date.parse(created)) ||
+    !isRfc3339Instant(created) ||
     typeof source !== 'string' ||
     !isSafeHttpsUrl(source) ||
     typeof workflowRunUrl !== 'string' ||
@@ -330,6 +382,16 @@ export async function smokeDockerImage(
     }
   }
 
+  if (primaryError !== undefined && cleanupError !== undefined) {
+    const primaryFailure =
+      primaryError instanceof DockerImageSmokeError
+        ? primaryError
+        : new DockerImageSmokeError('primary operation')
+    throw new AggregateError(
+      [primaryFailure, cleanupError],
+      'Docker image smoke failed: primary operation and container cleanup',
+    )
+  }
   if (primaryError !== undefined) {
     throw primaryError
   }

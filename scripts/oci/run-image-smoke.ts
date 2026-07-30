@@ -217,7 +217,14 @@ async function readLocalBuildMetadata(commands: CommandPort): Promise<{
   return { created, revision, source }
 }
 
-async function runLocalImageSmoke(commands: CommandPort): Promise<void> {
+/**
+ * Собирает и проверяет локальный image, затем удаляет только созданный tag.
+ *
+ * @remarks
+ * Порт команд передаётся явно для локальной сертификации orchestration без
+ * доступа тестов к Docker daemon.
+ */
+export async function runLocalImageSmoke(commands: CommandPort): Promise<void> {
   const metadata = await readLocalBuildMetadata(commands)
   const imageRef = `react-starter-oci-smoke:${process.pid}-${randomUUID()}`
   let buildAttempted = false
@@ -278,6 +285,16 @@ async function runLocalImageSmoke(commands: CommandPort): Promise<void> {
     }
   }
 
+  if (primaryError !== undefined && cleanupError !== undefined) {
+    const primaryFailure =
+      primaryError instanceof OciSmokeExecutionError
+        ? primaryError
+        : new OciSmokeExecutionError('primary operation')
+    throw new AggregateError(
+      [primaryFailure, cleanupError],
+      'OCI smoke execution failed: primary operation and local image cleanup',
+    )
+  }
   if (primaryError !== undefined) {
     throw primaryError
   }

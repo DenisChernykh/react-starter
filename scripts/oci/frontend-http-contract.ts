@@ -2,10 +2,18 @@ const REQUEST_TIMEOUT_MS = 5_000
 const APPROVAL_REQUEST_PATH =
   '/approval-requests/00000000-0000-4000-8000-000000000001'
 const HTML_PATHS = ['/', '/login', APPROVAL_REQUEST_PATH] as const
+const FRONTEND_PREFIX_COLLISION_PATHS = [
+  '/v10',
+  '/v1-admin',
+  '/healthcheck',
+] as const
 const BACKEND_PATHS = [
+  '/v1',
   '/v1/__frontend_deployment_probe__',
+  '/health',
   '/health/unknown',
 ] as const
+const UNVERSIONED_ASSET_PATH = '/favicon.svg'
 
 type ContractRule =
   | 'request'
@@ -18,6 +26,7 @@ type ContractRule =
   | 'backend-not-html'
   | 'x-content-type-options'
   | 'referrer-policy'
+  | 'server-version'
   | 'x-frame-options'
 
 /** Ошибка одного фиксированного правила HTTP-контракта без данных ответа. */
@@ -62,6 +71,7 @@ function requireSecurityHeaders(path: string, response: Response): void {
     response.headers.get('x-frame-options'),
     'DENY',
   )
+  requireEqual(path, 'server-version', response.headers.get('server'), 'nginx')
 }
 
 async function request(
@@ -111,6 +121,12 @@ async function requireHtmlRoute(
   requireStatus(path, response, 200)
   requireSecurityHeaders(path, response)
   requireMediaType(path, response, 'text/html')
+  requireEqual(
+    path,
+    'cache-control',
+    response.headers.get('cache-control'),
+    'no-cache',
+  )
   const body = await response.text()
   if (!/<[^>]+\sid=["']root["'][^>]*>/iu.test(body)) {
     fail(path, 'app-root')
@@ -122,7 +138,7 @@ async function requireHtmlRoute(
 function discoverHashedAsset(indexHtml: string): string {
   const candidates = indexHtml.match(/\/assets\/[^"'?\s>]+/giu) ?? []
   const assetPath = candidates.find((candidate) =>
-    /-[a-z0-9_-]{6,}\.[a-z0-9]+$/iu.test(candidate),
+    /-[a-z0-9_-]{8,}\.[a-z0-9]+$/iu.test(candidate),
   )
   if (!assetPath) {
     fail('/', 'hashed-asset')
@@ -176,6 +192,20 @@ export async function verifyFrontendHttpContract(
     'public, max-age=31536000, immutable',
   )
 
+  const unversionedAsset = await request(
+    baseUrl,
+    UNVERSIONED_ASSET_PATH,
+    fetchImplementation,
+  )
+  requireStatus(UNVERSIONED_ASSET_PATH, unversionedAsset, 200)
+  requireSecurityHeaders(UNVERSIONED_ASSET_PATH, unversionedAsset)
+  requireEqual(
+    UNVERSIONED_ASSET_PATH,
+    'cache-control',
+    unversionedAsset.headers.get('cache-control'),
+    'no-cache',
+  )
+
   for (const path of BACKEND_PATHS) {
     const response = await request(baseUrl, path, fetchImplementation)
     requireStatus(path, response, 404)
@@ -184,5 +214,10 @@ export async function verifyFrontendHttpContract(
     if (contentType?.startsWith('text/html')) {
       fail(path, 'backend-not-html')
     }
+  }
+
+  for (const path of FRONTEND_PREFIX_COLLISION_PATHS) {
+    const response = await request(baseUrl, path, fetchImplementation)
+    await requireHtmlRoute(path, response)
   }
 }

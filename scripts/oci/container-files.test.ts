@@ -22,9 +22,7 @@ describe('frontend container files', () => {
     const nginx = await readFile('config/nginx/default.conf', 'utf8')
     const backendLocation = nginx
       .split('location ~ ^/(?:v1|health)(?:/|$) {')[1]
-      ?.split(
-        'location ~* \\.(?:css|js|mjs|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$ {',
-      )[0]
+      ?.split('location ~* ')[0]
 
     expect(nginx).toMatch(/location ~ \^\/\(\?:v1\|health\)/u)
     expect(nginx).toContain('try_files $uri $uri/ /index.html;')
@@ -34,11 +32,11 @@ describe('frontend container files', () => {
     expect(backendLocation).toContain('return 404 "Not Found\\n";')
   })
 
-  it('emits one exact immutable Cache-Control value for hashed assets', async () => {
+  it('quotes the fingerprint regex and long-caches every fingerprinted extension', async () => {
     const nginx = await readFile('config/nginx/default.conf', 'utf8')
     const assetLocation = nginx
       .split(
-        'location ~* \\.(?:css|js|mjs|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$ {',
+        'location ~* "^/assets/(?:.+/)?[^/]+-[a-z0-9_-]{8,}\\.[^/]+$" {',
       )[1]
       ?.split('location = /index.html')[0]
 
@@ -46,6 +44,38 @@ describe('frontend container files', () => {
     expect(assetLocation).not.toContain('expires 1y;')
     expect(assetLocation).toContain(
       'add_header Cache-Control "public, max-age=31536000, immutable" always;',
+    )
+    expect(nginx).not.toMatch(/location ~\* \\\.\(\?:css\|js/u)
+  })
+
+  it('keeps HTML and unversioned public assets conservative', async () => {
+    const nginx = await readFile('config/nginx/default.conf', 'utf8')
+    const indexLocation = nginx
+      .split('location = /index.html {')[1]
+      ?.split('location / {')[0]
+    const fallbackLocation = nginx.split('location / {')[1]
+
+    expect(nginx).toContain('server_tokens off;')
+    expect(indexLocation).toContain('expires -1;')
+    expect(fallbackLocation).toContain('expires -1;')
+    expect(fallbackLocation).not.toContain('immutable')
+  })
+
+  it('excludes sensitive and local-only Docker context paths', async () => {
+    const dockerignore = (await readFile('.dockerignore', 'utf8'))
+      .split(/\r?\n/u)
+      .filter(Boolean)
+
+    expect(dockerignore).toEqual(
+      expect.arrayContaining([
+        '.env',
+        '.env.*',
+        '.git',
+        '.npmrc',
+        '.superpowers',
+        '.worktrees/',
+        'node_modules',
+      ]),
     )
   })
 })
