@@ -26,13 +26,14 @@ capability создавай отдельным vertical slice по той же �
 
 Выбирай документ по задаче до изменения source:
 
-| Задача                          | Документ                                                       |
-| ------------------------------- | -------------------------------------------------------------- |
-| Создать новый проект из starter | [bootstrap runbook](docs/getting-started.md)                   |
-| Понять состав и runtime flows   | [архитектурный обзор](docs/architecture/overview.md)           |
-| Подключить бизнес-модуль        | [business module guide](docs/architecture/business-modules.md) |
-| Создать или расширить shared UI | [UI guidelines](docs/architecture/ui-guidelines.md)            |
-| Изменить handwritten export     | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md)      |
+| Задача                                 | Документ                                                                                                                                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Создать новый проект из starter        | [bootstrap runbook](docs/getting-started.md)                                                                                                    |
+| Понять состав и runtime flows          | [архитектурный обзор](docs/architecture/overview.md)                                                                                            |
+| Подключить бизнес-модуль               | [business module guide](docs/architecture/business-modules.md)                                                                                  |
+| Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                             |
+| Изменить handwritten export            | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md)                                                                                       |
+| Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
 
 При создании нового проекта выполни `docs/getting-started.md` по порядку. Не
 восстанавливай bootstrap по памяти или только по краткому README.
@@ -132,8 +133,9 @@ backend OpenAPI
    `src/shared/api/index.ts`.
 4. Page не импортирует generated React Query hooks напрямую: query/cache
    принадлежит entity, mutation — feature.
-5. `OPENAPI_SPEC_SOURCE` выбирает build-time source; `VITE_API_BASE_URL`
-   задаёт runtime API origin.
+5. `OPENAPI_SPEC_SOURCE` выбирает build-time source. Browser transport всегда
+   обращается к относительному same-origin `/v1`; `DEV_API_PROXY_TARGET`
+   действует только в Vite `serve` и не попадает в production bundle.
 6. Generated Zod presentation локализуй снаружи generated files.
 7. После изменения backend contract выполни `api:update`, просмотри diff,
    затем `api:check` и `pnpm check`.
@@ -185,6 +187,11 @@ pnpm check
 Он проверяет OpenAPI drift, formatting, ESLint, FSD, tests и production build.
 Перед заявлением о готовности используй свежий вывод текущего checkout.
 
+Отдельный Docker-dependent gate `pnpm oci:check` собирает локальный
+`linux/amd64` frontend image и выполняет его smoke-проверку. Он не входит в
+`pnpm check`, требует доступный Docker daemon и не является доказательством
+remote CI, GHCR publication или deployment.
+
 Разделяй доказательства:
 
 1. source review;
@@ -194,8 +201,11 @@ pnpm check
 5. publication/merge;
 6. deployment.
 
-Локальный commit или `pnpm check` не доказывает runtime, публикацию или
-deployment. В отчёте явно указывай, какие уровни действительно проверены.
+Локальный commit, `pnpm check` или `pnpm oci:check` не доказывает remote CI,
+публикацию или deployment. Push в integration branch (обычно после merge)
+может запустить workflow и опубликовать проверенный candidate image, но сам по
+себе не выполняет deployment. В отчёте явно указывай, какие уровни
+действительно проверены.
 
 ## Условный JSX
 

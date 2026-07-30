@@ -167,19 +167,21 @@ git remote -v
 
 ### Обязательные места
 
-| Файл                                     | Что изменить                                   |
-| ---------------------------------------- | ---------------------------------------------- |
-| `package.json`                           | `name` на npm-safe slug нового проекта         |
-| `index.html`                             | пользовательский `<title>`                     |
-| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                        |
-| `README.md`                              | название, назначение и product-specific запуск |
-| `.env.local`                             | runtime origin backend                         |
-| `.github/workflows/ci.yml`               | branches, если integration branch не `stage`   |
+| Файл                                     | Что изменить                                      |
+| ---------------------------------------- | ------------------------------------------------- |
+| `package.json`                           | `name` на npm-safe slug нового проекта            |
+| `index.html`                             | пользовательский `<title>`                        |
+| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                           |
+| `README.md`                              | название, назначение и product-specific запуск    |
+| `.env.local`                             | необязательный Vite dev proxy target              |
+| `.github/workflows/ci.yml`               | PR target branch для выбранной integration branch |
+| `.github/workflows/stage-image.yml`      | push branch для candidate image                   |
 
-Starter инициализируется с branch `main`, а исходный CI слушает `stage`.
-Выберите один процесс осознанно:
+Starter инициализируется с branch `main`, а исходные CI и candidate-image
+workflow слушают `stage`. Выберите один процесс осознанно и измените обе
+workflow-конфигурации согласованно:
 
-- оставить `main` и заменить `stage` на `main` в workflow;
+- оставить `main` и заменить `stage` на `main` в обоих workflow;
 - либо создать `stage`, сделать её integration branch и сохранить workflow.
 
 Не выполняйте слепую глобальную замену `react-starter`, `nest-js-starter` или
@@ -202,21 +204,24 @@ rg -n "react-started|React Starter|react-starter|nest-js-starter|approval-reques
 
 ### Environment
 
-Создайте локальный env:
+По умолчанию Vite dev server proxy направляет `/v1` и `/health` на
+`http://localhost:3000`; `.env.local` не нужен. Создайте его только для
+другого локального backend:
 
 ```bash
 cp .env.example .env.local
 ```
 
-`VITE_API_BASE_URL` — абсолютный HTTP(S) origin backend без пути к конкретной
-операции:
+`DEV_API_PROXY_TARGET` — абсолютный HTTP(S) origin без path. Это server-only
+настройка команды `vite serve`, а не runtime API origin production bundle:
 
 ```dotenv
-VITE_API_BASE_URL=http://localhost:3000
+DEV_API_PROXY_TARGET=http://localhost:3000
 ```
 
-В Vite эта переменная публична для browser bundle. Не помещайте в `VITE_*`
-secrets, session tokens или приватные credentials.
+Browser transport всегда запрашивает относительный same-origin `/v1`; не
+задавайте production backend hostname через `VITE_*`. Не помещайте secrets,
+session tokens или приватные credentials в локальный env.
 
 ## 6. Установить зависимости
 
@@ -310,7 +315,7 @@ Orval создаёт:
 
 Frontend ожидает cookie-based browser auth. Backend должен:
 
-- слушать origin из `VITE_API_BASE_URL`;
+- быть доступным по `DEV_API_PROXY_TARGET` для Vite dev server;
 - разрешать точный frontend origin с credentials;
 - выставлять session cookie;
 - выдавать session-bound CSRF token;
@@ -325,8 +330,10 @@ frontend origin: http://localhost:5173
 backend origin:  http://localhost:3000
 ```
 
-Backend `CORS_ORIGINS` должен содержать именно фактический frontend origin. Если
-Vite выбрал `5174`, значение `http://localhost:5173` уже не подходит.
+Backend `CORS_ORIGINS` должен содержать именно фактический frontend origin и
+проверять реальный browser `Origin`, даже когда Vite proxy направляет request
+к backend. Если Vite выбрал `5174`, значение `http://localhost:5173` уже не
+подходит.
 
 Успешная компиляция backend watcher не гарантирует HTTP readiness. Проверьте
 его health endpoint и listener отдельно.
@@ -390,6 +397,17 @@ git status --short
 - что commit опубликован;
 - что приложение развёрнуто.
 
+Если Docker daemon доступен, отдельно выполните OCI gate:
+
+```bash
+pnpm oci:check
+```
+
+Он локально собирает `linux/amd64` frontend image, проверяет image metadata и
+HTTP contract, затем удаляет созданные smoke container и image. Этот
+Docker-dependent gate не входит в `pnpm check`; его успешное завершение также
+не доказывает remote CI, GHCR publication или deployment.
+
 ## 11. Первый commit
 
 Перед commit убедитесь, что в status нет `.env*`, dependencies, build output
@@ -440,6 +458,7 @@ Push выполняется только после добавления про�
 
 - используются Node `24.18.0` и pnpm `11.15.1`;
 - `pnpm check` завершился с exit code `0`;
+- при доступном Docker `pnpm oci:check` завершился с exit code `0`;
 - `git diff --check` не показывает ошибок;
 - первый commit содержит только ожидаемый source.
 
@@ -452,5 +471,8 @@ Push выполняется только после добавления про�
 ### Publication
 
 Remote, push, pull request, merge и deployment не входят в bootstrap по
-умолчанию. Для каждого из них требуется отдельное действие и отдельное
-подтверждение результата.
+умолчанию. После персонализации workflow push в integration branch может
+опубликовать candidate image в GHCR, но не выполняет deployment. Для GHCR
+нужны package linkage с repository и permissions `contents: read` и
+`packages: write`; public frontend и admin публикуют отдельные images.
+Подробности — в [runbook публикации](runbooks/frontend-image-publication.md).

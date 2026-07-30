@@ -24,6 +24,8 @@
 - [подключение бизнес-модуля](business-modules.md);
 - [shared UI](ui-guidelines.md);
 - [TSDoc](tsdoc-guidelines.md).
+- [same-origin ingress](../runbooks/frontend-same-origin-ingress.md);
+- [публикация frontend image](../runbooks/frontend-image-publication.md).
 
 ## Технологический контракт
 
@@ -269,14 +271,17 @@ Page и feature не должны импортировать deep path из gene
 8. Добавьте безопасную presentation ошибок и тесты cache/error behavior.
 9. Выполните `pnpm api:check`, затем `pnpm check`.
 
-`OPENAPI_SPEC_SOURCE` используется при build-time synchronization.
-`VITE_API_BASE_URL` задаёт runtime origin Axios и решает другую задачу.
+`OPENAPI_SPEC_SOURCE` используется при build-time synchronization. Runtime
+browser transport не получает API hostname: Axios и generated operations
+используют относительный same-origin путь `/v1`. Только Vite `serve` читает
+server-side `DEV_API_PROXY_TARGET` (по умолчанию `http://localhost:3000`) и
+proxy-рует `/v1` и `/health`; эта настройка не попадает в production bundle.
 
 ## HTTP, авторизация и CSRF
 
 `API_AXIOS_INSTANCE` в `src/shared/api/client/axios-client.ts`:
 
-- использует проверенный `VITE_API_BASE_URL`;
+- использует относительные same-origin `/v1` URLs без production API origin;
 - всегда отправляет cookie credentials;
 - добавляет `Content-Type: application/json` для unsafe requests;
 - превращает отсутствующее unsafe body в `{}`;
@@ -297,7 +302,33 @@ CSRF token хранится только в памяти модуля:
   используются.
 
 Credentialed browser auth требует точного frontend origin в backend CORS.
-Совпадение host, scheme и port обязательно.
+Совпадение host, scheme и port обязательно; backend валидирует фактический
+browser `Origin`, а не доверяет только адресу proxy target.
+
+### Same-origin production happy path
+
+```text
+browser request /v1/*
+→ same-origin public или admin host
+→ ingress path router
+→ backend
+```
+
+Browser получает frontend assets и `/v1/*` с одного public/admin origin, поэтому
+production bundle не знает hostname backend. Ingress обязан отправить `/v1/*`
+и `/health/*` в backend **до** frontend fallback; иначе SPA `index.html` может
+замаскировать API misrouting. Container frontend намеренно не proxy-рует API:
+его `/_frontend/health` принадлежит image, а API/health paths в нём получают
+non-HTML `404`. Полная host/path table и probes описаны в
+[same-origin ingress runbook](../runbooks/frontend-same-origin-ingress.md).
+
+### OCI runtime ownership boundary
+
+Frontend OCI image владеет собранными static assets, Nginx на non-root `8080`
+и внутренним `/_frontend/health`. Он не владеет hostname, TLS, HSTS, backend
+credentials, API routing, GHCR access или Dokploy/VPS configuration. Эти
+границы принадлежат ingress и следующему operator/deployment этапу; hostname
+не baked into image.
 
 ## Контракт ошибок
 
@@ -472,11 +503,24 @@ backend operation
 Не объединяйте разные виды доказательств:
 
 1. **Source review** — пути, imports, contracts и diff выглядят согласованно.
-2. **Local gates** — `pnpm check` прошёл на закреплённом runtime.
-3. **Browser/runtime** — frontend действительно работает с запущенным backend,
+2. **Local source gate** — `pnpm check` прошёл на закреплённом runtime.
+3. **Local OCI gate** — Docker-dependent `pnpm oci:check` проверил локально
+   собранный `linux/amd64` image; это не remote evidence.
+4. **Browser/runtime** — frontend действительно работает с запущенным backend,
    CORS, cookie, CSRF и тестовым пользователем.
-4. **Remote CI** — конкретный GitHub run завершился успешно.
-5. **Publication** — branch/commit опубликован, PR создан или слит.
-6. **Deployment** — конкретная среда запущена и проверена.
+5. **Remote CI** — конкретный GitHub run завершился успешно.
+6. **GHCR publication** — конкретный image digest опубликован и доступен.
+7. **Deployment** — конкретная среда запущена и проверена.
 
-Локальный commit не является remote CI, merge или deployment evidence.
+Evidence flows отличаются:
+
+```text
+source → pull request → CI: pnpm check
+merge/push в integration branch → gate → build → GHCR digest → Trivy → pull → smoke → candidate
+candidate digest → отдельный deployment operator → hosted runtime
+```
+
+SHA/run tag — locator workflow, не release identity: operator использует exact
+digest только после успешных scan и smoke. Merge/push может создать candidate,
+но не выполняет deployment. Локальный commit, `pnpm check` или `pnpm oci:check`
+не является remote CI, GHCR publication или deployment evidence.
