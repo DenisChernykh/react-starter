@@ -96,7 +96,7 @@ jobs:
           IMAGE_NAME: ${{ steps.metadata.outputs.image_name }}
           WORKFLOW_RUN_URL: ${{ steps.metadata.outputs.workflow_run_url }}
         run: |
-          pnpm oci:check -- \
+          pnpm oci:check \
             --image "${IMAGE_NAME}@${DIGEST}" \
             --revision "${GITHUB_SHA}" \
             --source "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \

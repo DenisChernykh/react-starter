@@ -203,6 +203,7 @@ describe('frontend GitHub workflows', () => {
     expect(smoke.run).toEqual(
       expect.stringContaining('--image "${IMAGE_NAME}@${DIGEST}"'),
     )
+    expect(smoke.run).not.toContain('pnpm oci:check --')
     expect(requireRecord(smoke.env, 'smoke env').WORKFLOW_RUN_URL).toBe(
       '${{ steps.metadata.outputs.workflow_run_url }}',
     )
