@@ -871,10 +871,10 @@ describe('FrontendDeploymentOrchestrator failure evidence', () => {
 })
 
 describe('FrontendDeploymentOrchestrator rollback boundary', () => {
-  it('fails closed without touching a port until explicit rollback is implemented', async () => {
-    const harness = operationHarness('promotion')
-    const sourceEvidence: FrontendDeploymentEvidence = {
+  function sourceEvidence(): FrontendDeploymentEvidence {
+    return {
       applicationId,
+      deploymentId: 'deployment_failed',
       environment: 'stage',
       failedStep: 'hosted_smoke',
       finishedAt: '2025-01-01T00:00:10.000Z',
@@ -893,21 +893,219 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
         imageRef: candidateImage,
         revision: candidateRevision,
       },
+      terminalStatus: 'done',
       workflowRunUrl:
         'https://github.com/example/react-starter/actions/runs/123/attempts/1',
     }
-    const orchestrator = new FrontendDeploymentOrchestrator(
+  }
+
+  function rollbackHarness(current = candidateImage): OperationHarness {
+    const harness = operationHarness('promotion', {
+      pollResponses: [
+        [previousDeployment, targetDeployment('running')],
+        [previousDeployment, targetDeployment('done')],
+      ],
+    })
+    const original = harness.dependencies
+    const rollbackTitle = `frontend:rollback:${currentRevision}:1735689600000`
+    let deploymentRead = 0
+    const rollbackRunning: DokployDeploymentRecord = {
+      deploymentId: 'deployment_rollback',
+      status: 'running',
+      title: rollbackTitle,
+    }
+    const rollbackDone: DokployDeploymentRecord = {
+      ...rollbackRunning,
+      status: 'done',
+    }
+    const responses = [
+      [previousDeployment],
+      [previousDeployment, rollbackRunning],
+      [previousDeployment, rollbackDone],
+    ] as const
+
+    return {
+      ...harness,
+      dependencies: {
+        ...original,
+        publication: {
+          verify: async () => {
+            throw new Error('Rollback must not verify a workflow run')
+          },
+        },
+        image: {
+          verify: async (input) => {
+            harness.calls.push('image')
+            expect(input).toEqual({
+              image: {
+                imageRef: currentImage,
+                revision: currentRevision,
+              },
+              password: privateSecrets[2],
+              registryUrl: 'https://ghcr.io',
+              repository: 'example/react-starter',
+              signal: undefined,
+              username: 'package-reader',
+            })
+          },
+        },
+        dokploy: {
+          ...original.dokploy,
+          getApplication: async (receivedApplicationId) => {
+            harness.calls.push('application')
+            expect(receivedApplicationId).toBe(applicationId)
+            return {
+              applicationId,
+              dockerImage: current,
+              sourceType: 'docker',
+            }
+          },
+          listDeployments: async () => {
+            harness.calls.push(`deployments:${deploymentRead}`)
+            const response = responses[deploymentRead]
+            deploymentRead += 1
+            if (response === undefined) {
+              throw new Error('Unexpected rollback deployment read')
+            }
+            return response
+          },
+        },
+      },
+    }
+  }
+
+  it('verifies and explicitly rolls back the failed candidate once', async () => {
+    const harness = rollbackHarness()
+
+    const evidencePath = await new FrontendDeploymentOrchestrator(
       harness.dependencies,
+    ).rollback(sourceEvidence(), live, '/safe')
+
+    expect(evidencePath).toBe('/safe/evidence.json')
+    expect(harness.calls).toEqual([
+      'image',
+      'application',
+      'deployments:0',
+      'update',
+      'deploy',
+      'deployments:1',
+      'sleep',
+      'deployments:2',
+      'smoke',
+      'evidence',
+    ])
+    expect(harness.updateImage).toHaveBeenCalledOnce()
+    expect(harness.updateImage).toHaveBeenCalledWith(
+      applicationId,
+      currentImage,
+      undefined,
+    )
+    expect(harness.deploy).toHaveBeenCalledOnce()
+    expect(harness.deploy).toHaveBeenCalledWith({
+      applicationId,
+      description: `Frontend rollback for revision ${currentRevision}`,
+      signal: undefined,
+      title: `frontend:rollback:${currentRevision}:1735689600000`,
+    })
+    expect(harness.smoke).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      ['/approval-requests/example'],
+      undefined,
+    )
+    expect(harness.evidenceWrites).toEqual([
+      {
+        applicationId,
+        deploymentId: 'deployment_rollback',
+        environment: 'stage',
+        finishedAt: '2025-01-01T00:00:05.000Z',
+        operation: 'rollback',
+        outcome: 'succeeded',
+        previous: {
+          imageRef: candidateImage,
+          revision: candidateRevision,
+        },
+        publicBaseUrl: 'https://stage.example.test',
+        repository: 'example/react-starter',
+        schemaVersion: 1,
+        smoke: {
+          apiProbeStatus: 404,
+          checkedPaths: ['/', '/login', '/approval-requests/example'],
+        },
+        smokePaths: ['/approval-requests/example'],
+        startedAt: '2025-01-01T00:00:00.000Z',
+        target: {
+          imageRef: currentImage,
+          revision: currentRevision,
+        },
+        terminalStatus: 'done',
+        workflowRunUrl: null,
+      },
+    ])
+  })
+
+  it.each([
+    ['bootstrap evidence', { operation: 'bootstrap', previous: null }],
+    ['rollback evidence', { operation: 'rollback', workflowRunUrl: null }],
+    ['successful evidence', { outcome: 'succeeded', failedStep: undefined }],
+    [
+      'invalid previous image',
+      {
+        previous: {
+          imageRef: 'ghcr.io/example/react-starter:stage',
+          revision: currentRevision,
+        },
+      },
+    ],
+    ['another application', { applicationId: 'app_other' }],
+  ] as const)(
+    'rejects %s before touching a live port',
+    async (_name, change) => {
+      const harness = rollbackHarness()
+      const evidence = {
+        ...sourceEvidence(),
+        ...change,
+      } as FrontendDeploymentEvidence
+
+      const error = await expectExecutionFailure(
+        new FrontendDeploymentOrchestrator(harness.dependencies).rollback(
+          evidence,
+          live,
+          '/safe',
+        ),
+      )
+
+      expect(error).toMatchObject({ step: 'rollback_source' })
+      expect(harness.calls).toEqual([])
+      expect(harness.updateImage).not.toHaveBeenCalled()
+      expect(harness.deploy).not.toHaveBeenCalled()
+      expect(harness.evidenceWrites).toHaveLength(0)
+    },
+  )
+
+  it('rejects current image drift before mutation', async () => {
+    const harness = rollbackHarness(
+      'ghcr.io/example/react-starter@sha256:' + 'c'.repeat(64),
     )
 
     const error = await expectExecutionFailure(
-      orchestrator.rollback(sourceEvidence, live, '/safe'),
+      new FrontendDeploymentOrchestrator(harness.dependencies).rollback(
+        sourceEvidence(),
+        live,
+        '/safe',
+      ),
     )
 
-    expect(error).toMatchObject({
-      category: 'not_implemented',
-      step: 'rollback',
+    expect(error).toMatchObject({ category: 'current_drift', step: 'rollback' })
+    expect(harness.calls).toEqual(['image', 'application', 'evidence'])
+    expect(harness.updateImage).not.toHaveBeenCalled()
+    expect(harness.deploy).not.toHaveBeenCalled()
+    expect(harness.evidenceWrites[0]).toMatchObject({
+      failedStep: 'rollback',
+      operation: 'rollback',
+      outcome: 'failed',
+      previous: sourceEvidence().target,
+      target: sourceEvidence().previous,
+      workflowRunUrl: null,
     })
-    expect(harness.calls).toEqual([])
   })
 })

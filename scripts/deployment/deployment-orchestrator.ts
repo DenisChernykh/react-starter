@@ -20,6 +20,7 @@ import type {
 
 const exactImagePattern =
   /^ghcr\.io\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?@sha256:[0-9a-f]{64}$/u
+const revisionPattern = /^[0-9a-f]{40}$/u
 const knownDeploymentStatuses = new Set([
   'cancelled',
   'done',
@@ -263,6 +264,34 @@ interface OperationState {
   terminalStatus?: string
 }
 
+type RollbackSourceEvidence = FrontendDeploymentEvidence & {
+  readonly operation: 'promote'
+  readonly outcome: 'failed' | 'indeterminate'
+  readonly previous: DeploymentImageReference
+}
+
+function requireRollbackSource(
+  evidence: FrontendDeploymentEvidence,
+  live: DeploymentLiveEnvironment,
+): asserts evidence is RollbackSourceEvidence {
+  const repositoryPrefix = `ghcr.io/${evidence.repository.toLowerCase()}@sha256:`
+  if (
+    evidence.operation !== 'promote' ||
+    (evidence.outcome !== 'failed' && evidence.outcome !== 'indeterminate') ||
+    evidence.previous === null ||
+    evidence.applicationId !== live.dokployApplicationId ||
+    !exactImagePattern.test(evidence.previous.imageRef) ||
+    !revisionPattern.test(evidence.previous.revision) ||
+    !exactImagePattern.test(evidence.target.imageRef) ||
+    !revisionPattern.test(evidence.target.revision) ||
+    !evidence.previous.imageRef.startsWith(repositoryPrefix) ||
+    !evidence.target.imageRef.startsWith(repositoryPrefix) ||
+    evidence.previous.imageRef === evidence.target.imageRef
+  ) {
+    fail('rollback_source', 'invalid')
+  }
+}
+
 /**
  * Координирует explicit bootstrap и promotion поверх проверенных портов.
  *
@@ -293,22 +322,156 @@ export class FrontendDeploymentOrchestrator {
     return this.#apply('promote', input)
   }
 
-  /**
-   * Резервирует fail-closed контракт explicit rollback для следующей задачи.
-   *
-   * @throws {@link DeploymentExecutionError} до подключения rollback policy.
-   */
+  /** Явно возвращает failed promotion на сохранённый previous exact digest. */
   async rollback(
-    _evidence: FrontendDeploymentEvidence,
-    _live: DeploymentLiveEnvironment,
-    _evidenceDirectory: string,
-    _signal?: AbortSignal,
+    sourceEvidence: FrontendDeploymentEvidence,
+    live: DeploymentLiveEnvironment,
+    evidenceDirectory: string,
+    signal?: AbortSignal,
   ): Promise<string> {
-    void _evidence
-    void _live
-    void _evidenceDirectory
-    void _signal
-    fail('rollback', 'not_implemented')
+    const startedAtMs = this.#dependencies.clock.nowMs()
+    const state: OperationState = { mutationStarted: false }
+    let sourceValidated = false
+    let rollbackTarget: DeploymentImageReference | null = null
+
+    try {
+      requireRollbackSource(sourceEvidence, live)
+      sourceValidated = true
+      rollbackTarget = sourceEvidence.previous
+
+      await runReadStep('image', signal, async () => {
+        await this.#dependencies.image.verify({
+          image: sourceEvidence.previous,
+          password: live.ghcrPassword,
+          registryUrl: live.ghcrRegistryUrl,
+          repository: sourceEvidence.repository,
+          signal,
+          username: live.ghcrUsername,
+        })
+      })
+      const application = await runReadStep('application', signal, async () =>
+        this.#dependencies.dokploy.getApplication(
+          live.dokployApplicationId,
+          signal,
+        ),
+      )
+      if (application.sourceType !== 'docker') {
+        fail('rollback', 'source_type')
+      }
+      if (application.dockerImage !== sourceEvidence.target.imageRef) {
+        fail('rollback', 'current_drift')
+      }
+
+      const snapshot = await runReadStep(
+        'deployment_snapshot',
+        signal,
+        async () =>
+          this.#dependencies.dokploy.listDeployments(
+            live.dokployApplicationId,
+            signal,
+          ),
+      )
+      const snapshotIds = new Set(
+        snapshot.map(({ deploymentId }) => deploymentId),
+      )
+      const title = `frontend:rollback:${sourceEvidence.previous.revision}:${this.#dependencies.clock.nowMs()}`
+
+      await this.#runMutation('update_image', signal, async () => {
+        state.mutationStarted = true
+        await this.#dependencies.dokploy.updateImage(
+          live.dokployApplicationId,
+          sourceEvidence.previous.imageRef,
+          signal,
+        )
+      })
+      await this.#runMutation('deploy', signal, async () => {
+        await this.#dependencies.dokploy.deploy({
+          applicationId: live.dokployApplicationId,
+          description: `Frontend rollback for revision ${sourceEvidence.previous.revision}`,
+          signal,
+          title,
+        })
+      })
+
+      const poll = await this.#pollDeployment(
+        live.dokployApplicationId,
+        snapshotIds,
+        title,
+        signal,
+        state,
+      )
+      const smoke = await this.#runMutation('hosted_smoke', signal, async () =>
+        this.#dependencies.smoke.verify(
+          sourceEvidence.publicBaseUrl,
+          sourceEvidence.smokePaths,
+          signal,
+        ),
+      )
+      const evidence = freezeEvidence({
+        applicationId: live.dokployApplicationId,
+        deploymentId: poll.deploymentId,
+        environment: sourceEvidence.environment,
+        finishedAt: new Date(this.#dependencies.clock.nowMs()).toISOString(),
+        operation: 'rollback',
+        outcome: 'succeeded',
+        previous: sourceEvidence.target,
+        publicBaseUrl: sourceEvidence.publicBaseUrl,
+        repository: sourceEvidence.repository,
+        schemaVersion: 1,
+        smoke,
+        smokePaths: sourceEvidence.smokePaths,
+        startedAt: new Date(startedAtMs).toISOString(),
+        target: sourceEvidence.previous,
+        terminalStatus: poll.terminalStatus,
+        workflowRunUrl: null,
+      })
+
+      return await this.#runMutation('evidence', signal, async () =>
+        this.#dependencies.evidence.write(evidenceDirectory, evidence),
+      )
+    } catch (error) {
+      const failure =
+        error instanceof DeploymentExecutionError
+          ? error
+          : new DeploymentExecutionError('operation', 'failed')
+      if (
+        failure.step === 'evidence' ||
+        !sourceValidated ||
+        rollbackTarget === null
+      ) {
+        throw failure
+      }
+
+      const evidence = freezeEvidence({
+        applicationId: live.dokployApplicationId,
+        ...(state.deploymentId === undefined
+          ? {}
+          : { deploymentId: state.deploymentId }),
+        environment: sourceEvidence.environment,
+        failedStep: failure.step,
+        finishedAt: new Date(this.#dependencies.clock.nowMs()).toISOString(),
+        operation: 'rollback',
+        outcome: this.#failureOutcome(failure, state),
+        previous: sourceEvidence.target,
+        publicBaseUrl: sourceEvidence.publicBaseUrl,
+        repository: sourceEvidence.repository,
+        schemaVersion: 1,
+        smokePaths: sourceEvidence.smokePaths,
+        startedAt: new Date(startedAtMs).toISOString(),
+        target: rollbackTarget,
+        ...(state.terminalStatus === undefined
+          ? {}
+          : { terminalStatus: state.terminalStatus }),
+        workflowRunUrl: null,
+      })
+
+      try {
+        await this.#dependencies.evidence.write(evidenceDirectory, evidence)
+      } catch {
+        fail('evidence', 'failed')
+      }
+      throw failure
+    }
   }
 
   async #apply(
