@@ -221,10 +221,12 @@ remote CI, GHCR publication или deployment.
 6. deployment с ID и hosted smoke.
 
 Локальный commit, `pnpm check` или `pnpm oci:check` не доказывает remote CI,
-публикацию или deployment. Push в integration branch (обычно после merge)
-может запустить workflow и опубликовать проверенный candidate image, но сам по
-себе не выполняет deployment. В отчёте явно указывай, какие уровни
-действительно проверены.
+публикацию или deployment. Доверенный внутренний pull request может
+опубликовать pre-merge verification image, но deployment operator принимает
+только успешный push run фактической integration branch. Push после merge
+повторяет image pipeline и может создать проверенный candidate, но сам по себе
+не выполняет deployment. В отчёте явно указывай, какие уровни действительно
+проверены.
 
 ## Условный JSX
 

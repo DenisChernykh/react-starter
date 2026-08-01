@@ -167,23 +167,22 @@ git remote -v
 
 ### Обязательные места
 
-| Файл                                     | Что изменить                                      |
-| ---------------------------------------- | ------------------------------------------------- |
-| `package.json`                           | `name` на npm-safe slug нового проекта            |
-| `index.html`                             | пользовательский `<title>`                        |
-| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                           |
-| `README.md`                              | название, назначение и product-specific запуск    |
-| `.env.local`                             | необязательный Vite dev proxy target              |
-| `.github/workflows/ci.yml`               | PR target branch для выбранной integration branch |
-| `.github/workflows/stage-image.yml`      | push branch для candidate image                   |
-| release manifest examples                | GHCR repository, public origin и smoke paths      |
-| будущий Dokploy Application              | отдельный application ID для этой frontend copy   |
+| Файл                                     | Что изменить                                    |
+| ---------------------------------------- | ----------------------------------------------- |
+| `package.json`                           | `name` на npm-safe slug нового проекта          |
+| `index.html`                             | пользовательский `<title>`                      |
+| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                         |
+| `README.md`                              | название, назначение и product-specific запуск  |
+| `.env.local`                             | необязательный Vite dev proxy target            |
+| `.github/workflows/stage-image.yml`      | PR и push branch для image pipeline             |
+| release manifest examples                | GHCR repository, public origin и smoke paths    |
+| будущий Dokploy Application              | отдельный application ID для этой frontend copy |
 
-Starter инициализируется с branch `main`, а исходные CI и candidate-image
-workflow слушают `stage`. Выберите один процесс осознанно и измените обе
-workflow-конфигурации согласованно:
+Starter инициализируется с branch `main`, а единый image workflow слушает
+`stage`. Выберите один процесс осознанно и измените оба trigger этого workflow
+согласованно:
 
-- оставить `main` и заменить `stage` на `main` в обоих workflow;
+- оставить `main` и заменить `stage` на `main` в `pull_request` и `push`;
 - либо создать `stage`, сделать её integration branch и сохранить workflow.
 
 Не выполняйте слепую глобальную замену `react-starter`, `nest-js-starter` или
@@ -501,9 +500,10 @@ Push выполняется только после добавления про�
 ### Publication
 
 Remote, push, pull request, merge и deployment не входят в bootstrap по
-умолчанию. После персонализации workflow push в integration branch может
-опубликовать candidate image в GHCR, но не выполняет deployment. Для GHCR
-нужны package linkage с repository и permissions `contents: read` и
+умолчанию. После персонализации доверенный внутренний pull request публикует
+pre-merge verification image, а push в integration branch — deployable
+candidate для фактического SHA. Fork и Dependabot publication пропускается.
+Для GHCR нужны package linkage с repository и permissions `contents: read` и
 `packages: write`; public frontend и admin публикуют отдельные images.
 Подробности — в [runbook публикации](runbooks/frontend-image-publication.md).
 Ручной promotion и rollback после публикации описаны в

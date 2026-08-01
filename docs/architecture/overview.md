@@ -551,12 +551,14 @@ backend operation
 Evidence flows отличаются:
 
 ```text
-source → pull request → CI: pnpm check
-merge/push в integration branch → gate → build → GHCR digest → Trivy → pull → smoke → candidate
+source → trusted pull request → gate → build → GHCR digest → Trivy → pull → smoke → pre-merge verification
+merge/push в integration branch → повторный pipeline → deployable stage candidate
 candidate digest → manifest → preflight → exact image → Dokploy → smoke → evidence
 ```
 
 SHA/run tag — locator workflow, не release identity: operator использует exact
-digest только после успешных scan и smoke. Merge/push может создать candidate,
-но не выполняет deployment. Локальный commit, `pnpm check` или `pnpm oci:check`
-не является remote CI, GHCR publication или deployment evidence.
+digest только после успешных scan и smoke. PR run проверяет image до merge, но
+operator принимает только успешный push run фактической integration branch.
+Merge/push может создать candidate, но не выполняет deployment. Локальный
+commit, `pnpm check` или `pnpm oci:check` не является remote CI, GHCR
+publication или deployment evidence.
