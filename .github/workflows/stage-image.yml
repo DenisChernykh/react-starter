@@ -1,6 +1,8 @@
 name: Stage image
 
 on:
+  pull_request:
+    branches: [stage]
   push:
     branches: [stage]
 
@@ -28,6 +30,7 @@ jobs:
 
   publish:
     needs: gate
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

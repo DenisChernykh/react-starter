@@ -85,36 +85,46 @@ function collectActionUses(
 }
 
 describe('frontend GitHub workflows', () => {
-  it('commit-pins every external action in source CI and publication', async () => {
-    const [{ document: ci }, { document: stageImage }] = await Promise.all([
-      readWorkflow('.github/workflows/ci.yml'),
-      readWorkflow('.github/workflows/stage-image.yml'),
-    ])
-    const ciUses = collectActionUses(ci)
+  it('commit-pins every external action in the unified image workflow', async () => {
+    const { document: stageImage } = await readWorkflow(
+      '.github/workflows/stage-image.yml',
+    )
     const stageUses = collectActionUses(stageImage)
 
-    expect(ciUses).toEqual([actionPins.checkout, actionPins.setupNode])
     expect(stageUses).toEqual(expect.arrayContaining(Object.values(actionPins)))
-    expect([...ciUses, ...stageUses]).toSatisfy((uses: readonly string[]) =>
+    expect(stageUses).toSatisfy((uses: readonly string[]) =>
       uses.every((value) => /^[^@\s]+@[a-f0-9]{40}$/u.test(value)),
     )
   })
 
-  it('keeps pull-request source CI separate and least-privileged', async () => {
-    const { document: ci } = await readWorkflow('.github/workflows/ci.yml')
-    const triggers = requireRecord(ci.on, 'CI triggers')
+  it('runs one least-privileged gate before trusted PR or stage publication', async () => {
+    const { document: stageImage } = await readWorkflow(
+      '.github/workflows/stage-image.yml',
+    )
+    const triggers = requireRecord(stageImage.on, 'Stage image triggers')
     const pullRequest = requireRecord(
       triggers.pull_request,
       'pull_request trigger',
     )
-    const check = requireJob(ci, 'check')
+    const push = requireRecord(triggers.push, 'push trigger')
+    const gate = requireJob(stageImage, 'gate')
+    const publish = requireJob(stageImage, 'publish')
 
     expect(pullRequest.branches).toEqual(['stage'])
-    expect(triggers).not.toHaveProperty('push')
-    expect(ci.permissions).toEqual({ contents: 'read' })
-    expect(check.permissions).toBeUndefined()
+    expect(push.branches).toEqual(['stage'])
+    expect(triggers).not.toHaveProperty('workflow_dispatch')
+    expect(stageImage.permissions).toEqual({ contents: 'read' })
+    expect(gate.permissions).toEqual({ contents: 'read' })
+    expect(publish.needs).toBe('gate')
+    expect(publish.if).toBe(
+      "github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')",
+    )
+    expect(publish.permissions).toEqual({
+      contents: 'read',
+      packages: 'write',
+    })
     expect(
-      requireSteps(check)
+      requireSteps(gate)
         .map((step) => step.run)
         .filter(Boolean),
     ).toEqual([
@@ -123,6 +133,9 @@ describe('frontend GitHub workflows', () => {
       'pnpm install --frozen-lockfile',
       'pnpm check',
     ])
+    await expect(
+      readFile('.github/workflows/ci.yml', 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   it('publishes linux/amd64 only after gate with exact attempt provenance', async () => {
