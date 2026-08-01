@@ -1,129 +1,113 @@
-# Pre-merge OCI gate и повтор публикации stage
+# Pre-merge publication gate для frontend image
 
 ## Проблема
 
-Текущий pull request workflow проверяет только `pnpm check`. Docker build и
-runtime smoke впервые выполняются после merge в `stage` внутри publication
-workflow. Детерминированная ошибка Dockerfile или HTTP-контракта поэтому может
-быть обнаружена уже после изменения integration branch и потребовать отдельный
-исправляющий pull request.
+Текущий pull request workflow проверяет только `pnpm check`. Docker build,
+Trivy и runtime smoke впервые выполняются после merge в `stage`. Поэтому
+детерминированная ошибка image или HTTP-контракта может быть обнаружена уже
+после изменения integration branch и потребовать отдельный исправляющий pull
+request.
 
-При этом не каждое падение publication требует изменения source. Временный
-сбой GitHub runner, сети или GHCR должен устраняться повторным запуском того же
-workflow run. Ручной новый запуск также должен быть возможен для текущего
-`stage`, но не для произвольной feature branch.
+`nest-js-starter` решает эту границу иначе: один и тот же `Stage image`
+workflow запускается на pull request и на push в `stage`. Внутренний pull
+request публикует проверочный candidate до merge, а push после merge повторяет
+pipeline для фактического stage revision.
 
 ## Решение
 
-Оставить разделение source verification и publication, но сдвинуть локальный
-OCI-контракт в обе стороны границы:
+Применить тот же жизненный цикл к `react-starter`, сохранив более строгую
+границу deployment operator:
 
 ```text
-pull request в stage
-→ check: pnpm check
-→ oci: pnpm oci:check
-→ оператор ждёт два успешных checks перед merge
-
-push в stage или manual dispatch текущего stage
-→ повторный source gate
+внутренний pull request в stage
+→ pnpm check
 → linux/amd64 build и push в GHCR
-→ Trivy scan exact digest
-→ pull и smoke exact digest
-→ verified candidate summary
+→ Trivy exact digest
+→ pull и OCI smoke exact digest
+→ pre-merge candidate, не разрешённый для deployment
+
+merge/push в stage
+→ повторить тот же pipeline для фактического stage SHA
+→ verified stage candidate, разрешённый для deployment preflight
 ```
 
-`ci.yml` получает отдельный параллельный job `oci`. Он использует закреплённые
-Node `24.18.0` и pnpm `11.15.1`, frozen install и существующий локальный
-`pnpm oci:check`. Раздельные jobs уменьшают wall-clock относительно
-последовательного запуска и дают отдельный проверяемый check contract.
+`.github/workflows/stage-image.yml` становится единым workflow для
+`pull_request.branches: [stage]` и `push.branches: [stage]`.
+`.github/workflows/ci.yml` удаляется, чтобы `pnpm check` не выполнялся дважды в
+одном pull request. Job `gate` остаётся least-privileged и запускается для
+любого PR. Job `publish` запускается только для:
 
-Текущий repository приватный и использует GitHub Free. Live Branch Protection
-API вернул, что защита `stage` требует GitHub Pro или public repository. Для
-текущего pull request используется ограниченное public-окно:
+- push в `stage`;
+- pull request из того же repository, если actor не `dependabot[bot]`.
 
-1. workflow-изменения реализуются и локально проверяются, пока repository
-   private;
-2. изменения отправляются в текущий pull request;
-3. repository временно переводится в public;
-4. для `stage` включаются required checks `check` и `oci`;
-5. после зелёного CI пользователь самостоятельно выполняет merge;
-6. пользователь сообщает о merge, оператор проверяет terminal result
-   `Stage image`;
-7. после проверки publication repository обязательно возвращается в private.
+Fork и Dependabot проходят source gate, но не получают `packages: write` и не
+публикуют image. Внутренние feature branches могут публиковать проверочный
+candidate через автоматически выданный `GITHUB_TOKEN`.
 
-После возврата в private на GitHub Free branch protection больше недоступен.
-То есть эта процедура технически защищает текущий merge, но не создаёт
-постоянную защиту будущих pull requests. Для постоянного enforcement нужен
-public repository или GitHub Pro.
+`workflow_dispatch` не добавляется. Основной recovery конкретного transient
+сбоя — **Re-run failed jobs**; повтор сохраняет исходный event `push` или
+`pull_request`. Это важно, потому что deployment operator намеренно принимает
+только успешный `push` run exact `stage` revision и отвергает PR/manual runs.
 
-`stage-image.yml` сохраняет `push.branches: [stage]` и получает
-`workflow_dispatch` без inputs. Первым шагом gate проверяет, что `github.ref`
-равен `refs/heads/stage`. Поэтому ручной запуск с feature branch завершается до
-install, registry login, build или publication. Репозиторий уже использует
-`stage` как default branch, поэтому обычный UI manual run выбирает нужную
-границу по умолчанию.
+## Deployment eligibility
 
-Существующая кнопка **Re-run failed jobs** остаётся основным восстановлением
-конкретного упавшего publication run. `workflow_dispatch` нужен как явный
-fallback для новой попытки публикации текущего `stage`, а не как замена rerun.
+PR candidate доказывает, что source, Dockerfile, vulnerability gate и runtime
+contract проходят до merge. Он не является deployable artifact: synthetic PR
+merge SHA может отличаться от фактического merge commit.
 
-## Почему не другие варианты
+Существующий `GithubWorkflowAdapter` остаётся без изменений и требует:
 
-### Публиковать candidate до merge
+- `event === 'push'`;
+- `head_branch === integrationBranch`;
+- `head_sha === manifest revision`;
+- успешный exact attempt `.github/workflows/stage-image.yml`.
 
-Это сильнее сокращает post-merge работу, но создаёт GHCR artifacts для
-непринятых pull requests и усложняет связь digest с итоговым merge/squash SHA.
-Для starter это лишняя supply-chain сложность.
+Таким образом, release manifest не может сослаться на PR candidate даже при
+успешной публикации его digest. После merge workflow заново строит image для
+реального `stage` SHA, и только этот push run может пройти deployment
+preflight.
 
-### Убрать post-merge source gate
+## Почему repository остаётся private
 
-PR checks могут относиться к другому synthetic merge commit, если `stage`
-изменился перед merge. Повторный `pnpm check` на фактическом commit в `stage`
-остаётся полезной защитой перед publication.
+`nest-js-starter` также private и на GitHub Free не имеет branch protection.
+Его преимущество не связано с visibility: publication failures обнаруживаются
+в исходном pull request.
 
-### Запускать Trivy image scan до merge
-
-Текущий `pnpm oci:check` намеренно удаляет принадлежащий ему локальный image.
-Повторная сборка только ради pre-merge Trivy увеличит время и сложность. Trivy
-остаётся обязательным scan опубликованного exact digest. Если он находит
-реальную уязвимость, исправляющий PR является корректным результатом, а не
-ошибкой recovery design.
+`react-starter` остаётся private. Временное public-окно и настройка branch
+protection отменяются. Пользователь вручную выполняет merge только после
+зелёного `Stage image` run. Постоянное техническое принуждение всё ещё
+потребует public repository или GitHub Pro, но не нужно для выбранного
+pre-merge publication lifecycle.
 
 ## Ошибки и recovery
 
-- `check` или `oci` упал в pull request: временная branch protection блокирует
-  merge, а исправление остаётся в том же pull request.
-- Publication упал из-за transient runner/network/GHCR failure: повторить
-  failed jobs без нового pull request.
-- Publication требует новой попытки для текущего `stage`: запустить
-  `Stage image` вручную на `stage`.
-- Manual dispatch выбран не на `stage`: gate падает до side effects.
-- Trivy нашёл реальную HIGH/CRITICAL уязвимость или source gate упал на
-  фактическом stage commit: создать исправляющий pull request.
-- Ни один из workflows не вызывает Dokploy и не выполняет deployment.
-- Если взаимодействие приостанавливается во время public-окна, repository не
-  считается завершённым: оператор должен продолжить после сообщения
-  пользователя о merge и вернуть private после проверки publication.
+- Source, Docker, Trivy или digest smoke упал в pull request: исправить в том
+  же PR и дождаться нового run.
+- Fork/Dependabot PR: проверить только least-privileged gate; publication
+  намеренно skipped.
+- Post-merge publication упал из-за transient runner/network/GHCR failure:
+  повторить failed jobs без нового PR.
+- Post-merge pipeline обнаружил состояние, которого не было в PR: не считать
+  candidate approved; реальная source/security ошибка требует corrective PR.
+- Ни PR, ни push workflow не вызывает Dokploy и не выполняет deployment.
 
 ## Проверка
 
 Static workflow tests должны доказать:
 
-1. `ci.yml` реагирует только на pull request в `stage`;
-2. оба PR jobs имеют read-only `contents` и закреплённый toolchain;
-3. OCI job выполняет frozen install и `pnpm oci:check`;
-4. publication реагирует на push в `stage` и `workflow_dispatch`;
-5. stage ref проверяется до checkout/install/login/build;
-6. publication по-прежнему сканирует и smoke-проверяет exact digest;
-7. workflow не содержит Dokploy/VPS credentials или deployment calls.
+1. единый workflow реагирует на PR и push только для `stage`;
+2. gate использует `contents: read`, закреплённый toolchain, frozen install и
+   ровно один `pnpm check`;
+3. publish зависит от gate и имеет только `contents: read`, `packages: write`;
+4. publish condition разрешает push и доверенный внутренний PR, но исключает
+   fork и Dependabot;
+5. один immutable digest проходит Trivy, pull, smoke и summary;
+6. `workflow_dispatch`, Dokploy/VPS credentials и deployment calls
+   отсутствуют;
+7. deployment adapter продолжает отвергать `pull_request` run.
 
-После RED/GREEN focused test выполняется один финальный `pnpm check`. После
-push текущего pull request remote CI должен показать отдельные успешные jobs
-`check` и `oci`. Локальные и remote gates не доказывают GHCR publication до
-фактического merge/push в `stage`.
-
-## Операторская граница после merge
-
-Успешный `Stage image` создаёт только verified GHCR candidate. Он не меняет
-Dokploy Application, Traefik, DNS, TLS или VPS. Deployment candidate digest
-остаётся отдельной явно авторизованной операцией.
+TDD начинается с изменения static workflow tests и наблюдаемого RED на
+текущих YAML. После GREEN выполняются focused tests и один финальный
+`pnpm check`. После push remote PR должен показать успешные jobs `gate` и
+`publish`; это доказывает pre-merge publication candidate, но не post-merge
+stage publication и не deployment.
