@@ -4,11 +4,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { server } from '@/shared/lib/testing'
 
 import { ApiProblemError } from './api-errors'
+import { API_AXIOS_INSTANCE } from './axios-client'
 import { clearCsrfToken } from './csrf-token'
 import { healthReady, healthStartup } from '../generated/health/health'
 import { apiMutator } from './orval-mutator'
 
-const apiOrigin = 'http://localhost:3000'
+const apiOrigin = window.location.origin
 
 describe('credentialed Axios transport', () => {
   beforeEach(clearCsrfToken)
@@ -17,6 +18,7 @@ describe('credentialed Axios transport', () => {
     let csrfRequests = 0
     let credentials: RequestCredentials | undefined
     let csrfHeader: string | null = 'unexpected'
+    let observedOrigin: string | undefined
 
     server.use(
       http.get(`${apiOrigin}/v1/auth/csrf`, () => {
@@ -24,6 +26,7 @@ describe('credentialed Axios transport', () => {
         return HttpResponse.json({ csrfToken: 'csrf-from-endpoint' })
       }),
       http.post(`${apiOrigin}/v1/auth/login`, ({ request }) => {
+        observedOrigin = new URL(request.url).origin
         credentials = request.credentials
         csrfHeader = request.headers.get('X-CSRF-Token')
         return HttpResponse.json({
@@ -43,6 +46,8 @@ describe('credentialed Axios transport', () => {
     })
 
     expect(credentials).toBe('include')
+    expect(API_AXIOS_INSTANCE.defaults.baseURL).toBeUndefined()
+    expect(observedOrigin).toBe(window.location.origin)
     expect(csrfHeader).toBeNull()
     expect(csrfRequests).toBe(0)
   })

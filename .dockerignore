@@ -1,0 +1,17 @@
+.git
+.github
+.npmrc
+.superpowers
+.worktrees/
+worktrees/
+.env
+.env.*
+!.env.example
+.DS_Store
+node_modules
+dist
+coverage
+docs
+openapi
+scripts
+*.log

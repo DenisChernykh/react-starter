@@ -1,15 +1,12 @@
 import axios from 'axios'
 import { z } from 'zod'
 
-import { publicEnv } from '@/shared/config'
-
 import { getOrFetchCsrfToken } from './csrf-token'
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const csrfResponseSchema = z.object({ csrfToken: z.string().min(1) })
 
 const clientDefaults = {
-  baseURL: publicEnv.VITE_API_BASE_URL,
   withCredentials: true,
 }
 

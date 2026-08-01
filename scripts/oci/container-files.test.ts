@@ -1,0 +1,81 @@
+// @vitest-environment node
+
+import { readFile } from 'node:fs/promises'
+import { describe, expect, it } from 'vitest'
+
+describe('frontend container files', () => {
+  it('pins build/runtime images and the non-root runtime contract', async () => {
+    const dockerfile = await readFile('Dockerfile', 'utf8')
+
+    expect(dockerfile).toContain(
+      'node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436',
+    )
+    expect(dockerfile).toContain(
+      'nginxinc/nginx-unprivileged:alpine3.23-slim@sha256:eed3e4c2f3f9285e80610238e0b18fe1bf311c50559434db1969b1cfabd5518b',
+    )
+    expect(dockerfile).toContain('USER 101')
+    expect(dockerfile).toContain('EXPOSE 8080')
+    expect(dockerfile).toContain('io.github.actions.workflow-run-url')
+  })
+
+  it('keeps backend paths out of the SPA fallback', async () => {
+    const nginx = await readFile('config/nginx/default.conf', 'utf8')
+    const backendLocation = nginx
+      .split('location ~ ^/(?:v1|health)(?:/|$) {')[1]
+      ?.split('location ~* ')[0]
+
+    expect(nginx).toMatch(/location ~ \^\/\(\?:v1\|health\)/u)
+    expect(nginx).toContain('try_files $uri $uri/ /index.html;')
+    expect(nginx).toContain('/_frontend/health')
+    expect(backendLocation).toBeDefined()
+    expect(backendLocation).toContain('default_type text/plain;')
+    expect(backendLocation).toContain('return 404 "Not Found\\n";')
+  })
+
+  it('quotes the fingerprint regex and long-caches every fingerprinted extension', async () => {
+    const nginx = await readFile('config/nginx/default.conf', 'utf8')
+    const assetLocation = nginx
+      .split(
+        'location ~* "^/assets/(?:.+/)?[^/]+-[a-z0-9_-]{8,}\\.[^/]+$" {',
+      )[1]
+      ?.split('location = /index.html')[0]
+
+    expect(assetLocation).toBeDefined()
+    expect(assetLocation).not.toContain('expires 1y;')
+    expect(assetLocation).toContain(
+      'add_header Cache-Control "public, max-age=31536000, immutable" always;',
+    )
+    expect(nginx).not.toMatch(/location ~\* \\\.\(\?:css\|js/u)
+  })
+
+  it('keeps HTML and unversioned public assets conservative', async () => {
+    const nginx = await readFile('config/nginx/default.conf', 'utf8')
+    const indexLocation = nginx
+      .split('location = /index.html {')[1]
+      ?.split('location / {')[0]
+    const fallbackLocation = nginx.split('location / {')[1]
+
+    expect(nginx).toContain('server_tokens off;')
+    expect(indexLocation).toContain('expires -1;')
+    expect(fallbackLocation).toContain('expires -1;')
+    expect(fallbackLocation).not.toContain('immutable')
+  })
+
+  it('excludes sensitive and local-only Docker context paths', async () => {
+    const dockerignore = (await readFile('.dockerignore', 'utf8'))
+      .split(/\r?\n/u)
+      .filter(Boolean)
+
+    expect(dockerignore).toEqual(
+      expect.arrayContaining([
+        '.env',
+        '.env.*',
+        '.git',
+        '.npmrc',
+        '.superpowers',
+        '.worktrees/',
+        'node_modules',
+      ]),
+    )
+  })
+})

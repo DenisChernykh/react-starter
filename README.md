@@ -39,11 +39,22 @@ AI-агент также должен начать с [AGENTS.md](AGENTS.md).
 
 ```bash
 pnpm install --frozen-lockfile
-cp .env.example .env.local
 pnpm dev
 ```
 
-Frontend доступен на `http://localhost:5173`, backend ожидается на `http://localhost:3000`. Для browser-auth backend должен содержать `http://localhost:5173` в `CORS_ORIGINS`.
+Без `.env.local` Vite proxy направляет `/v1` и `/health` на
+`http://localhost:3000`. Для другого локального backend задайте только
+server-side `DEV_API_PROXY_TARGET` в `.env.local`; эта переменная применяется
+лишь командой `vite serve` и не является production API origin.
+
+```bash
+# Необязательно: только если локальный backend не http://localhost:3000.
+cp .env.example .env.local
+```
+
+Frontend доступен на `http://localhost:5173`. Для browser-auth backend всё
+равно валидирует фактический browser `Origin` и должен разрешать
+`http://localhost:5173` в `CORS_ORIGINS` с credentials.
 
 ## Документация
 
@@ -55,6 +66,14 @@ Frontend доступен на `http://localhost:5173`, backend ожидаетс
   loading, fields, container и dialogs.
 - [TSDoc](docs/architecture/tsdoc-guidelines.md) — контракт handwritten
   exports.
+- [Same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) —
+  подготовка маршрутизации public/admin/API hosts.
+- [Публикация frontend image](docs/runbooks/frontend-image-publication.md) —
+  candidate image, GHCR digest и границы evidence.
+- [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) — ручные
+  preflight, bootstrap и promotion exact digest.
+- [Explicit rollback](docs/runbooks/frontend-dokploy-rollback.md) — откат из
+  failed/indeterminate promotion evidence.
 
 ## Контракт API
 
@@ -67,8 +86,9 @@ pnpm api:check  # проверить воспроизводимость generate
 
 Каталоги `src/shared/api/generated` и `src/shared/api/generated-zod` создаются только Orval и не редактируются вручную.
 
-Runtime API задаётся отдельно через `VITE_API_BASE_URL`. Для явного build-time
-источника OpenAPI используйте:
+Browser API requests всегда используют относительный same-origin путь `/v1`;
+production build не содержит API hostname. `DEV_API_PROXY_TARGET` нужен только
+Vite dev server. Для явного build-time источника OpenAPI используйте:
 
 ```bash
 OPENAPI_SPEC_SOURCE=/absolute/path/to/backend/openapi.json pnpm api:update
@@ -92,12 +112,49 @@ OPENAPI_SPEC_SOURCE=/absolute/path/to/backend/openapi.json pnpm api:update
 
 ```bash
 pnpm check
+pnpm oci:check
 ```
 
 Команда последовательно проверяет OpenAPI drift, форматирование, ESLint, FSD-архитектуру, тесты и production build.
 
-Локальный gate не заменяет browser/runtime-проверку с запущенным backend и не
-является доказательством remote CI или deployment.
+`pnpm oci:check` — отдельная Docker-dependent проверка: она локально собирает
+`linux/amd64` image и проверяет его HTTP/metadata contract. Она не входит в
+`pnpm check` и не заменяет browser/runtime-проверку с запущенным backend.
+Ни одна из этих команд не является доказательством remote CI, GHCR publication
+или deployment.
+
+## Публикация образа
+
+При копировании starter выберите integration branch и одинаково
+персонализируйте `pull_request` в `.github/workflows/ci.yml` и `push` в
+`.github/workflows/stage-image.yml`. Push в неё (как правило, merge PR)
+запускает workflow candidate image, но не deployment.
+
+Workflow публикует image в `ghcr.io/<owner>/<repository>`; у workflow должны
+быть `contents: read` и `packages: write`, а пакет GHCR — linkage и доступ к
+этому repository. Скопированные public frontend и admin — разные приложения и
+публикуют отдельные images. Используйте immutable digest из workflow summary,
+а не SHA/run tag, для последующего оператора. Подробный порядок находится в
+[runbook публикации](docs/runbooks/frontend-image-publication.md).
+
+## Ручной deployment
+
+После отдельной подготовки Dokploy Application доступны четыре локальные
+operator-команды:
+
+```bash
+pnpm deployment:preflight -- --manifest /absolute/path/release.json
+pnpm deployment:bootstrap -- --manifest /absolute/path/release.json --apply
+pnpm deployment:promote -- --manifest /absolute/path/release.json --apply
+pnpm deployment:rollback -- --evidence /absolute/path/failed-evidence.json --apply
+```
+
+Preflight читает live GitHub/GHCR/Dokploy state, но не меняет Application.
+Остальные команды требуют явный `--apply`, пишут локальный `0600` evidence и
+не настраивают VPS, domains, Traefik, environment или registry credentials.
+Порядок и границы описаны в
+[deployment runbook](docs/runbooks/frontend-dokploy-deployment.md) и
+[rollback runbook](docs/runbooks/frontend-dokploy-rollback.md).
 
 ## Аутентификация
 

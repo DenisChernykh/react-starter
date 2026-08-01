@@ -1,2 +1,1 @@
-export { parsePublicEnv, publicEnv } from './env'
-export type { PublicEnv } from './env'
+import './zod-locale'

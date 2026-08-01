@@ -57,6 +57,12 @@ export default defineConfig([
     },
   },
   {
+    files: ['scripts/**/*.ts', 'vite.config.ts', 'vite.config.test.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     files: ['**/*.{test,spec}.{ts,tsx}'],
     rules: {
       'jsdoc/require-description': 'off',

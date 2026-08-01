@@ -167,19 +167,22 @@ git remote -v
 
 ### Обязательные места
 
-| Файл                                     | Что изменить                                   |
-| ---------------------------------------- | ---------------------------------------------- |
-| `package.json`                           | `name` на npm-safe slug нового проекта         |
-| `index.html`                             | пользовательский `<title>`                     |
-| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                        |
-| `README.md`                              | название, назначение и product-specific запуск |
-| `.env.local`                             | runtime origin backend                         |
-| `.github/workflows/ci.yml`               | branches, если integration branch не `stage`   |
+| Файл                                     | Что изменить                                    |
+| ---------------------------------------- | ----------------------------------------------- |
+| `package.json`                           | `name` на npm-safe slug нового проекта          |
+| `index.html`                             | пользовательский `<title>`                      |
+| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                         |
+| `README.md`                              | название, назначение и product-specific запуск  |
+| `.env.local`                             | необязательный Vite dev proxy target            |
+| `.github/workflows/stage-image.yml`      | PR и push branch для image pipeline             |
+| release manifest examples                | GHCR repository, public origin и smoke paths    |
+| будущий Dokploy Application              | отдельный application ID для этой frontend copy |
 
-Starter инициализируется с branch `main`, а исходный CI слушает `stage`.
-Выберите один процесс осознанно:
+Starter инициализируется с branch `main`, а единый image workflow слушает
+`stage`. Выберите один процесс осознанно и измените оба trigger этого workflow
+согласованно:
 
-- оставить `main` и заменить `stage` на `main` в workflow;
+- оставить `main` и заменить `stage` на `main` в `pull_request` и `push`;
 - либо создать `stage`, сделать её integration branch и сохранить workflow.
 
 Не выполняйте слепую глобальную замену `react-starter`, `nest-js-starter` или
@@ -202,21 +205,49 @@ rg -n "react-started|React Starter|react-starter|nest-js-starter|approval-reques
 
 ### Environment
 
-Создайте локальный env:
+По умолчанию Vite dev server proxy направляет `/v1` и `/health` на
+`http://localhost:3000`; `.env.local` не нужен. Создайте его только для
+другого локального backend:
 
 ```bash
 cp .env.example .env.local
 ```
 
-`VITE_API_BASE_URL` — абсолютный HTTP(S) origin backend без пути к конкретной
-операции:
+`DEV_API_PROXY_TARGET` — абсолютный HTTP(S) origin без path. Это server-only
+настройка команды `vite serve`, а не runtime API origin production bundle:
 
 ```dotenv
-VITE_API_BASE_URL=http://localhost:3000
+DEV_API_PROXY_TARGET=http://localhost:3000
 ```
 
-В Vite эта переменная публична для browser bundle. Не помещайте в `VITE_*`
-secrets, session tokens или приватные credentials.
+Browser transport всегда запрашивает относительный same-origin `/v1`; не
+задавайте production backend hostname через `VITE_*`. Не помещайте secrets,
+session tokens или приватные credentials в локальный env.
+
+### Publication и deployment coordinates
+
+Персонализируйте `integrationBranch`, `repository`, `publicBaseUrl` и product
+smoke paths в локальных копиях symbolic examples. `integrationBranch` должен
+совпадать с push branch в `.github/workflows/stage-image.yml`:
+
+- `docs/runbooks/frontend-release-manifest.bootstrap.example.json`;
+- `docs/runbooks/frontend-release-manifest.promotion.example.json`.
+
+Не коммитьте manifest с live release coordinates. Рабочие inputs и evidence
+храните под игнорируемой `.deployment/`; evidence writer создаёт каталог
+`.deployment/evidence` автоматически.
+
+Для public frontend и admin создаются разные GitHub repositories/GHCR packages
+и разные Dokploy Applications. Сохраните application ID только в operator
+environment `DOKPLOY_APPLICATION_ID`; не встраивайте его в image или release
+manifest. Registry connection, domains и same-origin routing настраиваются
+отдельно по [publication](runbooks/frontend-image-publication.md),
+[ingress](runbooks/frontend-same-origin-ingress.md) и
+[Dokploy operator](runbooks/frontend-dokploy-deployment.md) runbooks.
+
+Dokploy не требуется для установки dependencies, локального Vite запуска,
+OpenAPI generation, browser development или `pnpm check`. Его подготовка и
+любые live mutations начинаются только после отдельного явного разрешения.
 
 ## 6. Установить зависимости
 
@@ -310,7 +341,7 @@ Orval создаёт:
 
 Frontend ожидает cookie-based browser auth. Backend должен:
 
-- слушать origin из `VITE_API_BASE_URL`;
+- быть доступным по `DEV_API_PROXY_TARGET` для Vite dev server;
 - разрешать точный frontend origin с credentials;
 - выставлять session cookie;
 - выдавать session-bound CSRF token;
@@ -325,8 +356,10 @@ frontend origin: http://localhost:5173
 backend origin:  http://localhost:3000
 ```
 
-Backend `CORS_ORIGINS` должен содержать именно фактический frontend origin. Если
-Vite выбрал `5174`, значение `http://localhost:5173` уже не подходит.
+Backend `CORS_ORIGINS` должен содержать именно фактический frontend origin и
+проверять реальный browser `Origin`, даже когда Vite proxy направляет request
+к backend. Если Vite выбрал `5174`, значение `http://localhost:5173` уже не
+подходит.
 
 Успешная компиляция backend watcher не гарантирует HTTP readiness. Проверьте
 его health endpoint и listener отдельно.
@@ -408,6 +441,20 @@ git status --short
 git commit -m "chore: initialize project from react starter"
 ```
 
+После появления первого commit, если Docker daemon доступен, отдельно
+выполните OCI gate:
+
+```bash
+pnpm oci:check
+```
+
+Он читает revision и commit time из `HEAD`, локально собирает `linux/amd64`
+frontend image, проверяет image metadata, runtime identity и HTTP contract,
+затем удаляет созданные smoke container и image. Поэтому команда не может
+предшествовать первому commit. Этот Docker-dependent gate не входит в
+`pnpm check`; его успешное завершение также не доказывает remote CI, GHCR
+publication или deployment.
+
 Push выполняется только после добавления проверенного remote и отдельного
 разрешения на публикацию.
 
@@ -440,6 +487,7 @@ Push выполняется только после добавления про�
 
 - используются Node `24.18.0` и pnpm `11.15.1`;
 - `pnpm check` завершился с exit code `0`;
+- при доступном Docker `pnpm oci:check` завершился с exit code `0`;
 - `git diff --check` не показывает ошибок;
 - первый commit содержит только ожидаемый source.
 
@@ -452,5 +500,13 @@ Push выполняется только после добавления про�
 ### Publication
 
 Remote, push, pull request, merge и deployment не входят в bootstrap по
-умолчанию. Для каждого из них требуется отдельное действие и отдельное
-подтверждение результата.
+умолчанию. После персонализации доверенный внутренний pull request публикует
+pre-merge verification image, а push в integration branch — deployable
+candidate для фактического SHA. Fork и Dependabot publication пропускается.
+Для GHCR нужны package linkage с repository и permissions `contents: read` и
+`packages: write`; public frontend и admin публикуют отдельные images.
+Подробности — в [runbook публикации](runbooks/frontend-image-publication.md).
+Ручной promotion и rollback после публикации описаны в
+[Dokploy deployment runbook](runbooks/frontend-dokploy-deployment.md) и
+[rollback runbook](runbooks/frontend-dokploy-rollback.md); они не входят в
+bootstrap нового продукта.

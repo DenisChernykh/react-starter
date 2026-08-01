@@ -26,13 +26,15 @@ capability создавай отдельным vertical slice по той же �
 
 Выбирай документ по задаче до изменения source:
 
-| Задача                          | Документ                                                       |
-| ------------------------------- | -------------------------------------------------------------- |
-| Создать новый проект из starter | [bootstrap runbook](docs/getting-started.md)                   |
-| Понять состав и runtime flows   | [архитектурный обзор](docs/architecture/overview.md)           |
-| Подключить бизнес-модуль        | [business module guide](docs/architecture/business-modules.md) |
-| Создать или расширить shared UI | [UI guidelines](docs/architecture/ui-guidelines.md)            |
-| Изменить handwritten export     | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md)      |
+| Задача                                 | Документ                                                                                                                                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Создать новый проект из starter        | [bootstrap runbook](docs/getting-started.md)                                                                                                    |
+| Понять состав и runtime flows          | [архитектурный обзор](docs/architecture/overview.md)                                                                                            |
+| Подключить бизнес-модуль               | [business module guide](docs/architecture/business-modules.md)                                                                                  |
+| Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                             |
+| Изменить handwritten export            | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md)                                                                                       |
+| Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
+| Выполнить deployment или rollback      | [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) и [explicit rollback](docs/runbooks/frontend-dokploy-rollback.md)              |
 
 При создании нового проекта выполни `docs/getting-started.md` по порядку. Не
 восстанавливай bootstrap по памяти или только по краткому README.
@@ -132,8 +134,9 @@ backend OpenAPI
    `src/shared/api/index.ts`.
 4. Page не импортирует generated React Query hooks напрямую: query/cache
    принадлежит entity, mutation — feature.
-5. `OPENAPI_SPEC_SOURCE` выбирает build-time source; `VITE_API_BASE_URL`
-   задаёт runtime API origin.
+5. `OPENAPI_SPEC_SOURCE` выбирает build-time source. Browser transport всегда
+   обращается к относительному same-origin `/v1`; `DEV_API_PROXY_TARGET`
+   действует только в Vite `serve` и не попадает в production bundle.
 6. Generated Zod presentation локализуй снаружи generated files.
 7. После изменения backend contract выполни `api:update`, просмотри diff,
    затем `api:check` и `pnpm check`.
@@ -174,6 +177,24 @@ UI ветвится по стабильному `code`, а не по `title` и�
 5. Не выводи secrets, credentials, CSRF token, cookie или raw server payload в
    команды, логи и отчёт.
 
+## Deployment operator
+
+1. Не изменяй VPS, Dokploy Application, domains, Traefik, registry или live
+   environment без явного запроса пользователя.
+2. `deployment:preflight` read-only относительно Dokploy, но всё равно требует
+   live GitHub, GHCR и Dokploy credentials; не запускай его как обычный
+   локальный gate.
+3. Локальные operator tests с fake ports доказывают source contract, но не
+   совместимость API установленного Dokploy instance.
+4. Bootstrap/promotion/rollback запускаются только с `--apply`; rollback всегда
+   явный и никогда не выполняется автоматически после ошибки.
+5. Apply получает атомарный GitHub ref lease, повторно читает Application и
+   deployments под ним и останавливается при drift или active deployment.
+   Promotion до mutation также проверяет OCI identity `expectedCurrent`.
+6. Не заявляй deployment PASS без exact digest, deployment ID со статусом
+   `done`, совпавшего `/_frontend/identity`, backend
+   `application/problem+json` probe и сохранённого redacted evidence.
+
 ## Проверка результата
 
 Для source-изменений основной локальный gate:
@@ -185,6 +206,11 @@ pnpm check
 Он проверяет OpenAPI drift, formatting, ESLint, FSD, tests и production build.
 Перед заявлением о готовности используй свежий вывод текущего checkout.
 
+Отдельный Docker-dependent gate `pnpm oci:check` собирает локальный
+`linux/amd64` frontend image и выполняет его smoke-проверку. Он не входит в
+`pnpm check`, требует доступный Docker daemon и не является доказательством
+remote CI, GHCR publication или deployment.
+
 Разделяй доказательства:
 
 1. source review;
@@ -192,10 +218,15 @@ pnpm check
 3. browser/runtime с реальным backend;
 4. remote CI;
 5. publication/merge;
-6. deployment.
+6. deployment с ID и hosted smoke.
 
-Локальный commit или `pnpm check` не доказывает runtime, публикацию или
-deployment. В отчёте явно указывай, какие уровни действительно проверены.
+Локальный commit, `pnpm check` или `pnpm oci:check` не доказывает remote CI,
+публикацию или deployment. Доверенный внутренний pull request может
+опубликовать pre-merge verification image, но deployment operator принимает
+только успешный push run фактической integration branch. Push после merge
+повторяет image pipeline и может создать проверенный candidate, но сам по себе
+не выполняет deployment. В отчёте явно указывай, какие уровни действительно
+проверены.
 
 ## Условный JSX
 

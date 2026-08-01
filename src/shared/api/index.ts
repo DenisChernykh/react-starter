@@ -1,4 +1,4 @@
-import '@/shared/config/zod-locale'
+import '@/shared/config'
 
 export {
   ApiNetworkError,
