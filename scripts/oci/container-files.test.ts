@@ -11,7 +11,7 @@ describe('frontend container files', () => {
       'node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436',
     )
     expect(dockerfile).toContain(
-      'nginxinc/nginx-unprivileged:alpine3.23@sha256:6320020c7da8714feab524e02c08c5a1958675c4e68700e93a2fd8970b065786',
+      'nginxinc/nginx-unprivileged:alpine3.23-slim@sha256:eed3e4c2f3f9285e80610238e0b18fe1bf311c50559434db1969b1cfabd5518b',
     )
     expect(dockerfile).toContain('USER 101')
     expect(dockerfile).toContain('EXPOSE 8080')

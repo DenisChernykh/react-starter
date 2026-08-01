@@ -11,7 +11,7 @@ RUN printf '%s' "${BUILD_SOURCE}" | grep -Eq '^https://github\.com/[A-Za-z0-9_.-
     && mkdir -p /app/dist/_frontend \
     && printf '%s\n%s\n' "${BUILD_SOURCE}" "${BUILD_REVISION}" > /app/dist/_frontend/identity
 
-FROM nginxinc/nginx-unprivileged:alpine3.23@sha256:6320020c7da8714feab524e02c08c5a1958675c4e68700e93a2fd8970b065786 AS runtime
+FROM nginxinc/nginx-unprivileged:alpine3.23-slim@sha256:eed3e4c2f3f9285e80610238e0b18fe1bf311c50559434db1969b1cfabd5518b AS runtime
 ARG BUILD_SOURCE
 ARG BUILD_REVISION
 ARG BUILD_CREATED
