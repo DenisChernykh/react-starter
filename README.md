@@ -70,6 +70,10 @@ Frontend доступен на `http://localhost:5173`. Для browser-auth back
   подготовка маршрутизации public/admin/API hosts.
 - [Публикация frontend image](docs/runbooks/frontend-image-publication.md) —
   candidate image, GHCR digest и границы evidence.
+- [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) — ручные
+  preflight, bootstrap и promotion exact digest.
+- [Explicit rollback](docs/runbooks/frontend-dokploy-rollback.md) — откат из
+  failed/indeterminate promotion evidence.
 
 ## Контракт API
 
@@ -132,6 +136,25 @@ Workflow публикует image в `ghcr.io/<owner>/<repository>`; у workflow
 публикуют отдельные images. Используйте immutable digest из workflow summary,
 а не SHA/run tag, для последующего оператора. Подробный порядок находится в
 [runbook публикации](docs/runbooks/frontend-image-publication.md).
+
+## Ручной deployment
+
+После отдельной подготовки Dokploy Application доступны четыре локальные
+operator-команды:
+
+```bash
+pnpm deployment:preflight -- --manifest /absolute/path/release.json
+pnpm deployment:bootstrap -- --manifest /absolute/path/release.json --apply
+pnpm deployment:promote -- --manifest /absolute/path/release.json --apply
+pnpm deployment:rollback -- --evidence /absolute/path/failed-evidence.json --apply
+```
+
+Preflight читает live GitHub/GHCR/Dokploy state, но не меняет Application.
+Остальные команды требуют явный `--apply`, пишут локальный `0600` evidence и
+не настраивают VPS, domains, Traefik, environment или registry credentials.
+Порядок и границы описаны в
+[deployment runbook](docs/runbooks/frontend-dokploy-deployment.md) и
+[rollback runbook](docs/runbooks/frontend-dokploy-rollback.md).
 
 ## Аутентификация
 

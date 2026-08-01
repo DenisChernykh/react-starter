@@ -34,6 +34,7 @@ capability создавай отдельным vertical slice по той же �
 | Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                             |
 | Изменить handwritten export            | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md)                                                                                       |
 | Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
+| Выполнить deployment или rollback      | [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) и [explicit rollback](docs/runbooks/frontend-dokploy-rollback.md)              |
 
 При создании нового проекта выполни `docs/getting-started.md` по порядку. Не
 восстанавливай bootstrap по памяти или только по краткому README.
@@ -176,6 +177,20 @@ UI ветвится по стабильному `code`, а не по `title` и�
 5. Не выводи secrets, credentials, CSRF token, cookie или raw server payload в
    команды, логи и отчёт.
 
+## Deployment operator
+
+1. Не изменяй VPS, Dokploy Application, domains, Traefik, registry или live
+   environment без явного запроса пользователя.
+2. `deployment:preflight` read-only относительно Dokploy, но всё равно требует
+   live GitHub, GHCR и Dokploy credentials; не запускай его как обычный
+   локальный gate.
+3. Локальные operator tests с fake ports доказывают source contract, но не
+   совместимость API установленного Dokploy instance.
+4. Bootstrap/promotion/rollback запускаются только с `--apply`; rollback всегда
+   явный и никогда не выполняется автоматически после ошибки.
+5. Не заявляй deployment PASS без exact digest, deployment ID со статусом
+   `done`, успешного hosted smoke и сохранённого redacted evidence.
+
 ## Проверка результата
 
 Для source-изменений основной локальный gate:
@@ -199,7 +214,7 @@ remote CI, GHCR publication или deployment.
 3. browser/runtime с реальным backend;
 4. remote CI;
 5. publication/merge;
-6. deployment.
+6. deployment с ID и hosted smoke.
 
 Локальный commit, `pnpm check` или `pnpm oci:check` не доказывает remote CI,
 публикацию или deployment. Push в integration branch (обычно после merge)

@@ -23,9 +23,11 @@
 - [создание нового проекта](../getting-started.md);
 - [подключение бизнес-модуля](business-modules.md);
 - [shared UI](ui-guidelines.md);
-- [TSDoc](tsdoc-guidelines.md).
+- [TSDoc](tsdoc-guidelines.md);
 - [same-origin ingress](../runbooks/frontend-same-origin-ingress.md);
-- [публикация frontend image](../runbooks/frontend-image-publication.md).
+- [публикация frontend image](../runbooks/frontend-image-publication.md);
+- [Dokploy deployment operator](../runbooks/frontend-dokploy-deployment.md);
+- [explicit rollback](../runbooks/frontend-dokploy-rollback.md).
 
 ## Технологический контракт
 
@@ -327,8 +329,42 @@ non-HTML `404`. Полная host/path table и probes описаны в
 Frontend OCI image владеет собранными static assets, Nginx на non-root `8080`
 и внутренним `/_frontend/health`. Он не владеет hostname, TLS, HSTS, backend
 credentials, API routing, GHCR access или Dokploy/VPS configuration. Эти
-границы принадлежат ingress и следующему operator/deployment этапу; hostname
-не baked into image.
+границы принадлежат ingress и operator/deployment этапу; hostname не baked into
+image.
+
+### Единицы deployment operator
+
+Operator разделён на узкие проверяемые единицы:
+
+- strict manifest с exact integration branch и live-environment parsers;
+- GitHub workflow attempt verifier;
+- exact GHCR image и OCI-label verifier;
+- Dokploy Application/Deployment adapter;
+- hosted frontend/same-origin smoke;
+- orchestration bootstrap, promotion и explicit rollback;
+- атомарный redacted evidence writer и process CLI.
+
+Нормальный happy path:
+
+```text
+release manifest
+→ read-only preflight
+→ exact successful workflow attempt
+→ exact GHCR digest и OCI labels
+→ fresh Dokploy state
+→ explicit update + deploy
+→ lock нового deployment ID и poll
+→ hosted health/UI/API smoke
+→ local 0600 evidence
+```
+
+Apply повторяет preflight, потому что read-only результат не блокирует внешний
+state. Rollback читает failed/indeterminate promotion evidence и до mutation
+требует, чтобы configured image всё ещё совпадал с failed target. Operator не
+создаёт Application, не меняет Traefik/domains/environment/registry и никогда
+не запускает автоматический rollback. Подробные процедуры находятся в
+[deployment](../runbooks/frontend-dokploy-deployment.md) и
+[rollback](../runbooks/frontend-dokploy-rollback.md) runbooks.
 
 ## Контракт ошибок
 
@@ -517,7 +553,7 @@ Evidence flows отличаются:
 ```text
 source → pull request → CI: pnpm check
 merge/push в integration branch → gate → build → GHCR digest → Trivy → pull → smoke → candidate
-candidate digest → отдельный deployment operator → hosted runtime
+candidate digest → manifest → preflight → exact image → Dokploy → smoke → evidence
 ```
 
 SHA/run tag — locator workflow, не release identity: operator использует exact

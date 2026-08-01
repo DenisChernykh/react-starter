@@ -176,6 +176,8 @@ git remote -v
 | `.env.local`                             | необязательный Vite dev proxy target              |
 | `.github/workflows/ci.yml`               | PR target branch для выбранной integration branch |
 | `.github/workflows/stage-image.yml`      | push branch для candidate image                   |
+| release manifest examples                | GHCR repository, public origin и smoke paths      |
+| будущий Dokploy Application              | отдельный application ID для этой frontend copy   |
 
 Starter инициализируется с branch `main`, а исходные CI и candidate-image
 workflow слушают `stage`. Выберите один процесс осознанно и измените обе
@@ -222,6 +224,31 @@ DEV_API_PROXY_TARGET=http://localhost:3000
 Browser transport всегда запрашивает относительный same-origin `/v1`; не
 задавайте production backend hostname через `VITE_*`. Не помещайте secrets,
 session tokens или приватные credentials в локальный env.
+
+### Publication и deployment coordinates
+
+Персонализируйте `integrationBranch`, `repository`, `publicBaseUrl` и product
+smoke paths в локальных копиях symbolic examples. `integrationBranch` должен
+совпадать с push branch в `.github/workflows/stage-image.yml`:
+
+- `docs/runbooks/frontend-release-manifest.bootstrap.example.json`;
+- `docs/runbooks/frontend-release-manifest.promotion.example.json`.
+
+Не коммитьте manifest с live release coordinates. Рабочие inputs и evidence
+храните под игнорируемой `.deployment/`; evidence writer создаёт каталог
+`.deployment/evidence` автоматически.
+
+Для public frontend и admin создаются разные GitHub repositories/GHCR packages
+и разные Dokploy Applications. Сохраните application ID только в operator
+environment `DOKPLOY_APPLICATION_ID`; не встраивайте его в image или release
+manifest. Registry connection, domains и same-origin routing настраиваются
+отдельно по [publication](runbooks/frontend-image-publication.md),
+[ingress](runbooks/frontend-same-origin-ingress.md) и
+[Dokploy operator](runbooks/frontend-dokploy-deployment.md) runbooks.
+
+Dokploy не требуется для установки dependencies, локального Vite запуска,
+OpenAPI generation, browser development или `pnpm check`. Его подготовка и
+любые live mutations начинаются только после отдельного явного разрешения.
 
 ## 6. Установить зависимости
 
@@ -476,3 +503,7 @@ Remote, push, pull request, merge и deployment не входят в bootstrap �
 нужны package linkage с repository и permissions `contents: read` и
 `packages: write`; public frontend и admin публикуют отдельные images.
 Подробности — в [runbook публикации](runbooks/frontend-image-publication.md).
+Ручной promotion и rollback после публикации описаны в
+[Dokploy deployment runbook](runbooks/frontend-dokploy-deployment.md) и
+[rollback runbook](runbooks/frontend-dokploy-rollback.md); они не входят в
+bootstrap нового продукта.
