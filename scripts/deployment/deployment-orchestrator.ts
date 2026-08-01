@@ -224,6 +224,7 @@ export async function runDeploymentPreflight(
 
   await runReadStep('publication', signal, async () => {
     await dependencies.publication.verify({
+      integrationBranch: manifest.integrationBranch,
       repository: manifest.repository,
       revision: manifest.candidate.revision,
       signal,

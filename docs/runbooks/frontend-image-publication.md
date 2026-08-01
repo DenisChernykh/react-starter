@@ -44,7 +44,9 @@ Digest с упавшим Trivy scan или smoke не approved, даже есл�
 Скопированный public frontend и admin — разные приложения: каждый repository
 публикует свой image и свой digest. При bootstrap выберите integration branch
 и согласованно измените `pull_request` в `ci.yml` и `push` в
-`stage-image.yml`; не предполагается, что branch всегда называется `stage`.
+`stage-image.yml`. То же точное имя запишите как `integrationBranch` в release
+manifest: deployment preflight связывает с ним GitHub run attempt. Branch не
+обязан называться `stage`.
 
 Официальные справки GitHub: [публикация Docker image через Actions](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
 и [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).

@@ -17,6 +17,7 @@ const promotionManifest = {
   schemaVersion: 1,
   mode: 'promotion',
   environment: 'stage',
+  integrationBranch: 'stage',
   repository: 'example/react-starter',
   workflowRunUrl:
     'https://github.com/example/react-starter/actions/runs/123/attempts/1',
@@ -108,6 +109,20 @@ describe('parseDeploymentManifest', () => {
     expect(serialized).toContain('unrecognized_keys')
     expect(serialized).not.toContain(Object.values(extra)[0]?.toString())
   })
+
+  it.each(['', '/stage', 'stage/', 'release//candidate', 'release..candidate'])(
+    'rejects invalid integration branch %j',
+    (integrationBranch) => {
+      const error = expectInputError({
+        ...promotionManifest,
+        integrationBranch,
+      })
+
+      if (integrationBranch !== '') {
+        expect(JSON.stringify(error)).not.toContain(integrationBranch)
+      }
+    },
+  )
 
   it.each([
     ['uppercase', 'Stage'],

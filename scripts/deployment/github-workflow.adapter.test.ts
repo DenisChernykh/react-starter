@@ -48,6 +48,7 @@ function attemptResponse(overrides: Record<string, unknown> = {}): Response {
 
 function verifyInput(
   overrides: Partial<{
+    readonly integrationBranch: string
     readonly repository: string
     readonly revision: string
     readonly workflowRunUrl: string
@@ -56,6 +57,7 @@ function verifyInput(
   }> = {},
 ) {
   return {
+    integrationBranch: 'stage',
     repository,
     revision,
     token,
@@ -107,6 +109,16 @@ describe('GithubWorkflowAdapter', () => {
     })
     expect(fake.calls[0]?.init?.body).toBeUndefined()
     expect(fake.calls[0]?.init?.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('binds a personalized integration branch to the exact run attempt', async () => {
+    const fake = recordingFetch(attemptResponse({ head_branch: 'main' }))
+
+    await expect(
+      new GithubWorkflowAdapter({ fetchImplementation: fake.fetch }).verify(
+        verifyInput({ integrationBranch: 'main' }),
+      ),
+    ).resolves.toBeUndefined()
   })
 
   it.each([

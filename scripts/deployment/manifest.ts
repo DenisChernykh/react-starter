@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 
 const environmentPattern = /^[a-z0-9][a-z0-9-]{0,63}$/u
+const integrationBranchPattern =
+  /^[A-Za-z0-9](?:[A-Za-z0-9._/-]{0,253}[A-Za-z0-9])?$/u
 const imageRefPattern =
   /^ghcr\.io\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?@sha256:[0-9a-f]{64}$/u
 const repositoryPattern =
@@ -25,6 +27,7 @@ export interface FrontendDeploymentManifest {
   readonly schemaVersion: 1
   readonly mode: DeploymentMode
   readonly environment: string
+  readonly integrationBranch: string
   readonly repository: string
   readonly workflowRunUrl: string
   readonly publicBaseUrl: string
@@ -87,6 +90,9 @@ const manifestSchema = z
     environment: z.string().refine((value) => environmentPattern.test(value), {
       message: 'environment_format',
     }),
+    integrationBranch: z.string().refine(isIntegrationBranch, {
+      message: 'integration_branch_format',
+    }),
     repository: z.string().refine((value) => repositoryPattern.test(value), {
       message: 'repository_format',
     }),
@@ -126,6 +132,15 @@ function addIssue(
     message: rule,
     path: [...path],
   })
+}
+
+function isIntegrationBranch(value: string): boolean {
+  return (
+    integrationBranchPattern.test(value) &&
+    !value.includes('..') &&
+    !value.includes('//') &&
+    !value.endsWith('.lock')
+  )
 }
 
 function validateWorkflowRunUrl(

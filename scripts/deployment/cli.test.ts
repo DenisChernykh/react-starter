@@ -40,6 +40,7 @@ function manifest(mode: 'bootstrap' | 'promotion'): FrontendDeploymentManifest {
   return parseDeploymentManifest({
     candidate: { imageRef: candidateImage, revision: candidateRevision },
     environment: 'stage',
+    integrationBranch: 'stage',
     expectedCurrent:
       mode === 'bootstrap'
         ? null

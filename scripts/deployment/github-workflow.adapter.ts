@@ -140,7 +140,7 @@ export class GithubWorkflowAdapter implements PublicationVerificationPort {
       attempt.event !== 'push' ||
       attempt.status !== 'completed' ||
       attempt.conclusion !== 'success' ||
-      attempt.head_branch !== 'stage' ||
+      attempt.head_branch !== input.integrationBranch ||
       attempt.head_sha !== input.revision ||
       attempt.path !== EXPECTED_WORKFLOW_PATH
     ) {

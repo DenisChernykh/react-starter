@@ -15,6 +15,14 @@ const GHCR_REGISTRY_HOST = 'ghcr.io'
 const GHCR_REGISTRY_URL = 'https://ghcr.io'
 const GHCR_DIGEST_IMAGE_PATTERN =
   /^ghcr\.io\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)@sha256:[0-9a-f]{64}$/u
+const DOCKER_ENVIRONMENT_KEYS = [
+  'PATH',
+  'DOCKER_HOST',
+  'DOCKER_TLS_VERIFY',
+  'DOCKER_CERT_PATH',
+  'SSL_CERT_FILE',
+  'SSL_CERT_DIR',
+] as const
 
 interface TemporaryDockerConfigFunctions {
   readonly chmod: (path: string, mode: number) => Promise<void>
@@ -114,6 +122,20 @@ function requireValidImageInput(
   }
 }
 
+function createDockerEnvironment(
+  source: NodeJS.ProcessEnv,
+  dockerConfig: string,
+): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = { DOCKER_CONFIG: dockerConfig }
+  for (const key of DOCKER_ENVIRONMENT_KEYS) {
+    const value = source[key]
+    if (value !== undefined) {
+      environment[key] = value
+    }
+  }
+  return environment
+}
+
 /**
  * Проверяет доступность exact digest и его OCI provenance через временную auth.
  *
@@ -125,15 +147,18 @@ function requireValidImageInput(
  */
 export class DockerImageVerificationAdapter implements ImageVerificationPort {
   private readonly commands: CommandPort
+  private readonly environment: NodeJS.ProcessEnv
   private readonly temporaryDockerConfig: TemporaryDockerConfigFunctions
 
   constructor(
     dependencies: {
       readonly commands?: CommandPort
+      readonly environment?: NodeJS.ProcessEnv
       readonly temporaryDockerConfig?: TemporaryDockerConfigFunctions
     } = {},
   ) {
     this.commands = dependencies.commands ?? new ExecFileCommandRunner()
+    this.environment = dependencies.environment ?? process.env
     this.temporaryDockerConfig =
       dependencies.temporaryDockerConfig ?? defaultTemporaryDockerConfig
   }
@@ -154,7 +179,7 @@ export class DockerImageVerificationAdapter implements ImageVerificationPort {
       await this.temporaryDockerConfig.chmod(temporaryConfig, 0o700)
 
       const options: CommandOptions = {
-        env: { ...process.env, DOCKER_CONFIG: temporaryConfig },
+        env: createDockerEnvironment(this.environment, temporaryConfig),
         signal: input.signal,
         timeoutMs: COMMAND_TIMEOUT_MS,
       }

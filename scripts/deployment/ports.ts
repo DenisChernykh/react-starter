@@ -3,6 +3,7 @@ import type { DeploymentImageReference } from './manifest.ts'
 /** Порт проверки exact GitHub Actions run attempt для опубликованной ревизии. */
 export interface PublicationVerificationPort {
   verify(input: {
+    readonly integrationBranch: string
     readonly repository: string
     readonly revision: string
     readonly workflowRunUrl: string

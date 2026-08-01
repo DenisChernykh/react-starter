@@ -47,6 +47,7 @@ function manifest(mode: 'bootstrap' | 'promotion'): FrontendDeploymentManifest {
       revision: candidateRevision,
     },
     environment: 'stage',
+    integrationBranch: 'stage',
     expectedCurrent:
       mode === 'bootstrap'
         ? null
@@ -103,6 +104,7 @@ function preflightHarness(options: PreflightHarnessOptions = {}): {
         verify: async (input) => {
           calls.push('publication')
           expect(input).toEqual({
+            integrationBranch: 'stage',
             repository: 'example/react-starter',
             revision: candidateRevision,
             signal: undefined,

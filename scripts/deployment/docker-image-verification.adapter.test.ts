@@ -132,6 +132,7 @@ function verifyInput(
 function createAdapter(
   commands: CommandPort,
   temporary = new FakeTemporaryDockerConfig(),
+  environment?: NodeJS.ProcessEnv,
 ): {
   readonly adapter: DockerImageVerificationAdapter
   readonly temporary: FakeTemporaryDockerConfig
@@ -139,6 +140,7 @@ function createAdapter(
   return {
     adapter: new DockerImageVerificationAdapter({
       commands,
+      environment,
       temporaryDockerConfig: temporary.functions,
     }),
     temporary,
@@ -251,7 +253,19 @@ describe('DockerImageVerificationAdapter', () => {
 
   it('logs in through stdin, pulls and inspects the exact digest with isolated auth', async () => {
     const commands = new FakeCommandPort()
-    const { adapter, temporary } = createAdapter(commands)
+    const { adapter, temporary } = createAdapter(
+      commands,
+      new FakeTemporaryDockerConfig(),
+      {
+        DOCKER_CONTEXT: 'private-context-name',
+        DOCKER_HOST: 'unix:///safe/docker.sock',
+        DOKPLOY_API_KEY: 'private-dokploy-key',
+        GHCR_PASSWORD: password,
+        GITHUB_TOKEN: 'private-github-token',
+        PATH: '/safe/bin',
+        UNRELATED_SECRET: 'private-unrelated-secret',
+      },
+    )
 
     await expect(adapter.verify(verifyInput())).resolves.toBeUndefined()
 
@@ -296,11 +310,16 @@ describe('DockerImageVerificationAdapter', () => {
       },
     ])
     for (const call of commands.calls) {
-      expect(call.options.env?.DOCKER_CONFIG).toBe(dockerConfig)
+      expect(call.options.env).toEqual({
+        DOCKER_CONFIG: dockerConfig,
+        DOCKER_HOST: 'unix:///safe/docker.sock',
+        PATH: '/safe/bin',
+      })
       expect(call.options.signal).toBeUndefined()
       expect(call.options.timeoutMs).toBeGreaterThan(0)
       expect(call.arguments_).not.toContain(password)
       expect(JSON.stringify(call.options.env)).not.toContain(password)
+      expect(JSON.stringify(call.options.env)).not.toContain('private-')
     }
     expect(commands.calls[0]?.options.stdin).toBe(password)
     expect(commands.calls[1]?.options.stdin).toBeUndefined()
