@@ -342,6 +342,8 @@ interface OperationHarness {
 }
 
 interface OperationHarnessOptions {
+  readonly abortAfterSnapshot?: AbortController
+  readonly abortDuringSmoke?: AbortController
   readonly abortOnFirstSleep?: AbortController
   readonly evidenceFailure?: string
   readonly pollResponses?: readonly (readonly DokployDeploymentRecord[])[]
@@ -401,6 +403,10 @@ function operationHarness(
   })
   const smoke = vi.fn(async () => {
     calls.push('smoke')
+    if (options.abortDuringSmoke !== undefined) {
+      options.abortDuringSmoke.abort('private-smoke-abort')
+      options.abortDuringSmoke.signal.throwIfAborted()
+    }
     if (options.smokeFailure !== undefined) {
       throw new Error(options.smokeFailure)
     }
@@ -445,6 +451,12 @@ function operationHarness(
               return deploymentResponses.at(-1) ?? oldDeployments
             }
             throw new Error('Unexpected deployment read')
+          }
+          if (
+            deploymentRead === 2 &&
+            options.abortAfterSnapshot !== undefined
+          ) {
+            options.abortAfterSnapshot.abort('private-before-update-abort')
           }
           return response
         },
@@ -630,6 +642,34 @@ function expectFailedEvidence(
 }
 
 describe('FrontendDeploymentOrchestrator failure evidence', () => {
+  it('records abort after snapshot but before update as failed without mutation', async () => {
+    const controller = new AbortController()
+    const harness = operationHarness('promotion', {
+      abortAfterSnapshot: controller,
+    })
+
+    const error = await expectExecutionFailure(
+      runPromotion(harness, controller.signal),
+    )
+
+    expect(error).toMatchObject({ category: 'aborted', step: 'update_image' })
+    expect(harness.updateImage).not.toHaveBeenCalled()
+    expect(harness.deploy).not.toHaveBeenCalled()
+    expect(harness.evidenceWrites).toHaveLength(1)
+    expect(harness.evidenceWrites[0]).toMatchObject({
+      failedStep: 'update_image',
+      outcome: 'failed',
+      previous: {
+        imageRef: currentImage,
+        revision: currentRevision,
+      },
+      target: {
+        imageRef: candidateImage,
+        revision: candidateRevision,
+      },
+    })
+  })
+
   it('records ambiguous new deployments as indeterminate without rollback', async () => {
     const harness = operationHarness('promotion', {
       pollResponses: [
@@ -764,6 +804,29 @@ describe('FrontendDeploymentOrchestrator failure evidence', () => {
       deploymentId: 'deployment_target',
       failedStep: 'hosted_smoke',
       outcome: 'failed',
+      terminalStatus: 'done',
+    })
+  })
+
+  it('records abort during hosted smoke as indeterminate', async () => {
+    const controller = new AbortController()
+    const harness = operationHarness('promotion', {
+      abortDuringSmoke: controller,
+      pollResponses: [[previousDeployment, targetDeployment('done')]],
+    })
+
+    const error = await expectExecutionFailure(
+      runPromotion(harness, controller.signal),
+    )
+
+    expect(error).toMatchObject({
+      category: 'aborted',
+      step: 'hosted_smoke',
+    })
+    expectFailedEvidence(harness, {
+      deploymentId: 'deployment_target',
+      failedStep: 'hosted_smoke',
+      outcome: 'indeterminate',
       terminalStatus: 'done',
     })
   })

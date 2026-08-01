@@ -336,8 +336,8 @@ export class FrontendDeploymentOrchestrator {
       )
       const title = `frontend:${operation}:${input.manifest.candidate.revision}:${this.#dependencies.clock.nowMs()}`
 
-      state.mutationStarted = true
       await this.#runMutation('update_image', input.signal, async () => {
+        state.mutationStarted = true
         await this.#dependencies.dokploy.updateImage(
           input.live.dokployApplicationId,
           input.manifest.candidate.imageRef,
@@ -442,6 +442,9 @@ export class FrontendDeploymentOrchestrator {
   ): 'failed' | 'indeterminate' {
     if (!state.mutationStarted) {
       return 'failed'
+    }
+    if (failure.category === 'aborted') {
+      return 'indeterminate'
     }
     if (failure.step === 'hosted_smoke') {
       return 'failed'
