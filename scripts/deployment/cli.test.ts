@@ -153,11 +153,27 @@ function cliHarness(
       write: async () => '/safe/evidence.json',
     },
     image: { verify: async () => undefined },
+    lease: {
+      acquire: async ({ repository, revision }) => ({
+        ref: 'refs/tags/frontend-deployment-lock/stage-fe0275c5a52b6627',
+        repository,
+        revision,
+      }),
+      release: async () => undefined,
+    },
     publication: { verify: async () => undefined },
     smoke: {
       verify: async () => ({
         apiProbeStatus: 404,
-        checkedPaths: ['/', '/login', '/approval-requests/example'],
+        checkedPaths: [
+          '/_frontend/health',
+          '/_frontend/identity',
+          '/',
+          '/login',
+          '/approval-requests/example',
+          '/v1/__frontend_deployment_probe__',
+        ],
+        frontendRevision: revision,
       }),
     },
   }

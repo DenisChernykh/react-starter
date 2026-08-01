@@ -7,6 +7,10 @@ const approvalRequestPath =
   '/approval-requests/00000000-0000-4000-8000-000000000001'
 const assetPath = '/assets/index-a1b2c3d4.js'
 const unversionedAssetPath = '/favicon.svg'
+const expectedIdentity = Object.freeze({
+  revision: '1'.repeat(40),
+  source: 'https://github.com/example/react-starter',
+})
 const html = `<html><body><div id="root"></div><script src="${assetPath}"></script></body></html>`
 
 function response(
@@ -32,6 +36,17 @@ function successfulResponses(): Map<string, Response> {
       '/_frontend/health',
       response(
         'ok\n',
+        { status: 200 },
+        {
+          'cache-control': 'no-store',
+          'content-type': 'text/plain',
+        },
+      ),
+    ],
+    [
+      '/_frontend/identity',
+      response(
+        `${expectedIdentity.source}\n${expectedIdentity.revision}\n`,
         { status: 200 },
         {
           'cache-control': 'no-store',
@@ -141,12 +156,14 @@ describe('verifyFrontendHttpContract', () => {
     await expect(
       verifyFrontendHttpContract(
         new URL('http://127.0.0.1:8080'),
+        expectedIdentity,
         createFetch(successfulResponses(), requests),
       ),
     ).resolves.toBeUndefined()
 
     expect(requests.map(({ path }) => path)).toEqual([
       '/_frontend/health',
+      '/_frontend/identity',
       '/',
       '/login',
       approvalRequestPath,
@@ -199,6 +216,18 @@ describe('verifyFrontendHttpContract', () => {
       path: '/_frontend/health',
       replacement: response(
         'wrong\n',
+        { status: 200 },
+        {
+          'cache-control': 'no-store',
+          'content-type': 'text/plain',
+        },
+      ),
+    },
+    {
+      name: 'runtime identity',
+      path: '/_frontend/identity',
+      replacement: response(
+        `${expectedIdentity.source}\n${'2'.repeat(40)}\n`,
         { status: 200 },
         {
           'cache-control': 'no-store',
@@ -291,6 +320,7 @@ describe('verifyFrontendHttpContract', () => {
       await expect(
         verifyFrontendHttpContract(
           new URL('http://127.0.0.1:8080'),
+          expectedIdentity,
           createFetch(responses),
         ),
       ).rejects.toMatchObject({
@@ -300,6 +330,7 @@ describe('verifyFrontendHttpContract', () => {
       await expect(
         verifyFrontendHttpContract(
           new URL('http://127.0.0.1:8080'),
+          expectedIdentity,
           createFetch(responses),
         ),
       ).rejects.not.toThrow('console.log')

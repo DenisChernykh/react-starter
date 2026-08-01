@@ -3,6 +3,7 @@ import { chmod, link, mkdir, open, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import type { EvidencePort, FrontendDeploymentEvidence } from './ports.ts'
+import { isCanonicalSmokePath } from './smoke-path.ts'
 
 const environmentPattern = /^[a-z0-9][a-z0-9-]{0,63}$/u
 const imageRefPattern =
@@ -10,7 +11,6 @@ const imageRefPattern =
 const repositoryPattern =
   /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/iu
 const revisionPattern = /^[0-9a-f]{40}$/u
-const pathPattern = /^\/(?!\/)[^\s?#]*$/u
 const httpsOriginInputPattern = /^https:\/\/[^/?#\\\s]+\/?$/iu
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u
 const workflowRunPattern =
@@ -22,8 +22,9 @@ const imageSchema = z.strictObject({
 })
 
 const smokeSchema = z.strictObject({
-  checkedPaths: z.array(z.string().refine((value) => pathPattern.test(value))),
+  checkedPaths: z.array(z.string().refine(isCanonicalSmokePath)),
   apiProbeStatus: z.number().int().min(400).max(499),
+  frontendRevision: z.string().refine((value) => revisionPattern.test(value)),
 })
 
 const evidenceSchema = z
@@ -39,9 +40,7 @@ const evidenceSchema = z
       .refine((value) => workflowRunPattern.test(value))
       .nullable(),
     publicBaseUrl: z.string(),
-    smokePaths: z
-      .array(z.string().refine((value) => pathPattern.test(value)))
-      .min(1),
+    smokePaths: z.array(z.string().refine(isCanonicalSmokePath)).min(1),
     previous: imageSchema.nullable(),
     target: imageSchema,
     startedAt: z.string().refine(isTimestamp),
@@ -69,7 +68,7 @@ const evidenceSchema = z
         })
       }
       seenSmokePaths.add(path)
-      if (/^(?:\/v1|\/health|\/_frontend\/health)(?:\/|$)/u.test(path)) {
+      if (/^(?:\/v1|\/health|\/_frontend)(?:\/|$)/u.test(path)) {
         context.addIssue({
           code: 'custom',
           path: ['smokePaths', index],

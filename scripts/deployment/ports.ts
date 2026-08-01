@@ -62,10 +62,41 @@ export interface DokployPort {
   }): Promise<void>
 }
 
+/** Публичный handle одной атомарно полученной deployment lease. */
+export interface DeploymentLease {
+  readonly ref: string
+  readonly repository: string
+  readonly revision: string
+}
+
+/** Порт межпроцессной lease, сериализующей mutation одного Application. */
+export interface DeploymentLeasePort {
+  acquire(input: {
+    readonly applicationId: string
+    readonly environment: string
+    readonly repository: string
+    readonly revision: string
+    readonly token: string
+    readonly signal?: AbortSignal
+  }): Promise<DeploymentLease>
+  release(input: {
+    readonly lease: DeploymentLease
+    readonly token: string
+    readonly signal?: AbortSignal
+  }): Promise<void>
+}
+
 /** Результат hosted smoke с проверенными UI-путями и API probe status. */
 export interface HostedSmokeResult {
   readonly checkedPaths: readonly string[]
   readonly apiProbeStatus: number
+  readonly frontendRevision: string
+}
+
+/** Ожидаемая source/revision identity проверенного exact frontend image. */
+export interface HostedSmokeExpectation {
+  readonly repository: string
+  readonly image: DeploymentImageReference
 }
 
 /** Порт проверки публичной HTTPS-границы развернутого frontend. */
@@ -73,6 +104,7 @@ export interface HostedSmokePort {
   verify(
     publicBaseUrl: string,
     smokePaths: readonly string[],
+    expected: HostedSmokeExpectation,
     signal?: AbortSignal,
   ): Promise<HostedSmokeResult>
 }

@@ -188,8 +188,12 @@ UI ветвится по стабильному `code`, а не по `title` и�
    совместимость API установленного Dokploy instance.
 4. Bootstrap/promotion/rollback запускаются только с `--apply`; rollback всегда
    явный и никогда не выполняется автоматически после ошибки.
-5. Не заявляй deployment PASS без exact digest, deployment ID со статусом
-   `done`, успешного hosted smoke и сохранённого redacted evidence.
+5. Apply получает атомарный GitHub ref lease, повторно читает Application и
+   deployments под ним и останавливается при drift или active deployment.
+   Promotion до mutation также проверяет OCI identity `expectedCurrent`.
+6. Не заявляй deployment PASS без exact digest, deployment ID со статусом
+   `done`, совпавшего `/_frontend/identity`, backend
+   `application/problem+json` probe и сохранённого redacted evidence.
 
 ## Проверка результата
 

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
+import { isCanonicalSmokePath } from './smoke-path.ts'
 
 const environmentPattern = /^[a-z0-9][a-z0-9-]{0,63}$/u
 const integrationBranchPattern =
@@ -9,7 +10,6 @@ const imageRefPattern =
 const repositoryPattern =
   /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/iu
 const revisionPattern = /^[0-9a-f]{40}$/u
-const smokePathPattern = /^\/(?!\/)[^\s?#]*$/u
 const httpsOriginInputPattern = /^https:\/\/[^/?#\\\s]+\/?$/iu
 const workflowPathPattern =
   /^\/([^/]+)\/([^/]+)\/actions\/runs\/[1-9][0-9]*\/attempts\/[1-9][0-9]*$/u
@@ -102,7 +102,7 @@ const manifestSchema = z
     expectedCurrent: imageReferenceSchema.nullable(),
     smokePaths: z
       .array(
-        z.string().refine((value) => smokePathPattern.test(value), {
+        z.string().refine(isCanonicalSmokePath, {
           message: 'smoke_path_format',
         }),
       )
@@ -248,7 +248,7 @@ function validateSmokePaths(
     }
     seen.add(path)
 
-    if (/^(?:\/v1|\/health|\/_frontend\/health)(?:\/|$)/u.test(path)) {
+    if (/^(?:\/v1|\/health|\/_frontend)(?:\/|$)/u.test(path)) {
       addIssue(context, ['smokePaths', index], 'smoke_path_reserved')
     }
   })

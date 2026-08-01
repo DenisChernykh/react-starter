@@ -33,10 +33,12 @@ CLI сначала строго читает evidence и только затем
 
 1. проверяет previous image как доступный exact GHCR digest;
 2. сверяет его OCI source и revision labels;
-3. читает Application;
-4. требует, чтобы configured image всё ещё совпадал с неуспешным
+3. атомарно получает тот же GitHub deployment lease, что promotion;
+4. под lease повторно читает Application и deployments и отвергает активную
+   deployment;
+5. требует, чтобы configured image всё ещё совпадал с неуспешным
    `sourceEvidence.target.imageRef`;
-5. сохраняет snapshot существующих deployments.
+6. сохраняет snapshot существующих deployments.
 
 Workflow URL для previous image повторно не требуется: identity задают exact
 digest, revision, OCI source label и уже сохранённая связь в evidence. Если
@@ -53,7 +55,10 @@ digest и запускает deployment с уникальным rollback title. 
 → закрепляет её ID
 → poll до terminal status
 → повторяет hosted smoke исходного public origin и UI paths
+→ сверяет `/_frontend/identity` с previous source/revision
+→ требует backend `application/problem+json` от same-origin API probe
 → пишет отдельное rollback evidence
+→ проверяет владение и освобождает deployment lease
 ```
 
 В rollback evidence направления меняются явно:
@@ -79,3 +84,8 @@ evidence и останавливается.
 hosted runtime. Новый rollback или promotion запускается только отдельной
 командой после fresh preflight. Local fake-adapter tests не заменяют реальный
 hosted rollback drill.
+
+Если процесс завершился до освобождения GitHub ref lease, следующая операция
+безопасно остановится как `lease_held`. Удалять такой ref вручную допустимо
+только после проверки, что старый operator и его deployment уже не работают;
+автоматически взламывать чужой или устаревший lease команда не будет.

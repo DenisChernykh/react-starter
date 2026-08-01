@@ -58,6 +58,12 @@ GHCR_PASSWORD
 manager или изолированную operator shell; не записывайте их в repository,
 manifest, evidence, shell history или отчёт.
 
+`GITHUB_TOKEN` проверяет workflow run и управляет deployment lease в том же
+repository. Кроме чтения Actions ему требуется `Contents: read and write`:
+operator атомарно создаёт и после операции удаляет служебный tag ref
+`frontend-deployment-lock/<environment>-<application-hash>`. Не используйте
+для operator token более широкие права, чем нужны этому repository.
+
 `GHCR_PASSWORD` используется локально только для временного `docker login`,
 pull exact digest и проверки OCI labels. CLI создаёт отдельный Docker config и
 удаляет его после проверки. Это значение не копируется в Dokploy: registry
@@ -91,8 +97,11 @@ Preflight требует live credentials, но не вызывает Dokploy mu
    и revision;
 2. входит во временный GHCR Docker config, тянет exact digest и проверяет OCI
    source/revision/workflow labels;
-3. читает Application и deployments из Dokploy;
-4. сверяет source type, текущий exact image и известную deployment history.
+3. для promotion так же проверяет OCI source/revision текущего
+   `expectedCurrent`, прежде чем разрешить сохранить его как previous image;
+4. читает Application и deployments из Dokploy;
+5. отвергает активную deployment и сверяет source type, текущий exact image и
+   известную deployment history.
 
 Успешный preflight не резервирует состояние. Между ним и apply другой оператор
 может изменить Application, поэтому apply всегда повторяет полный preflight.
@@ -122,14 +131,27 @@ Promotion требует, чтобы configured image всё ещё точно �
 `expectedCurrent`. После повторного preflight operator:
 
 ```text
-snapshot deployments
+атомарно получить GitHub deployment lease
+→ повторно прочитать Application и deployments под lease
+→ отклонить active deployment или drift
+→ snapshot deployments
 → update Application на candidate exact digest
 → deploy один раз
 → найти новую deployment по уникальному title
 → закрепить deployment ID и дождаться terminal status
-→ проверить hosted frontend и same-origin API boundary
+→ сверить hosted frontend source/revision с candidate
+→ получить backend application/problem+json на same-origin API probe
 → записать evidence
+→ проверить владение и освободить lease
 ```
+
+Dokploy Application API не предоставляет operator-у compare-and-swap для
+image update. Поэтому общий GitHub ref является межпроцессной блокировкой для
+всех экземпляров этого operator. Если lease уже существует, apply
+останавливается до Dokploy mutation. Потерянный после аварии lease намеренно
+блокирует следующие операции: удалять его вручную можно только после проверки,
+что соответствующий operator и deployment больше не выполняются. Operator не
+перехватывает и не удаляет чужой lease автоматически.
 
 Команда не меняет Traefik, domains, DNS, TLS, Application environment, registry
 credentials или webhook. Она никогда не выполняет rollback автоматически.
@@ -147,8 +169,10 @@ status и hosted smoke result. Credentials, headers и response bodies туда 
 
 - exact target digest и revision;
 - deployment ID со статусом `done`;
-- успешный hosted smoke всех UI paths, `/_frontend/health` и non-HTML `/v1`
-  probe;
+- успешный hosted smoke всех UI paths, `/_frontend/health` и
+  `/_frontend/identity`, причём identity совпал с target source/revision;
+- same-origin `/v1` probe вернул backend `application/problem+json`, а не
+  frontend fallback;
 - путь нового evidence-файла.
 
 Локальный `pnpm check`, `pnpm oci:check`, успешный workflow или mock operator

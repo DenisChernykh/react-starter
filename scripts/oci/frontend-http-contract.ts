@@ -15,10 +15,17 @@ const BACKEND_PATHS = [
 ] as const
 const UNVERSIONED_ASSET_PATH = '/favicon.svg'
 
+/** Ожидаемая публичная identity конкретной frontend image сборки. */
+export interface FrontendRuntimeIdentity {
+  readonly source: string
+  readonly revision: string
+}
+
 type ContractRule =
   | 'request'
   | 'status'
   | 'health-body'
+  | 'identity-body'
   | 'content-type'
   | 'cache-control'
   | 'app-root'
@@ -156,6 +163,7 @@ function discoverHashedAsset(indexHtml: string): string {
  */
 export async function verifyFrontendHttpContract(
   baseUrl: URL,
+  expectedIdentity: FrontendRuntimeIdentity,
   fetchImplementation: typeof fetch = fetch,
 ): Promise<void> {
   const healthPath = '/_frontend/health'
@@ -172,6 +180,24 @@ export async function verifyFrontendHttpContract(
   if ((await health.text()) !== 'ok\n') {
     fail(healthPath, 'health-body')
   }
+
+  const identityPath = '/_frontend/identity'
+  const identity = await request(baseUrl, identityPath, fetchImplementation)
+  requireStatus(identityPath, identity, 200)
+  requireSecurityHeaders(identityPath, identity)
+  requireMediaType(identityPath, identity, 'text/plain')
+  requireEqual(
+    identityPath,
+    'cache-control',
+    identity.headers.get('cache-control'),
+    'no-store',
+  )
+  requireEqual(
+    identityPath,
+    'identity-body',
+    await identity.text(),
+    `${expectedIdentity.source}\n${expectedIdentity.revision}\n`,
+  )
 
   const index = await request(baseUrl, HTML_PATHS[0], fetchImplementation)
   const indexHtml = await requireHtmlRoute(HTML_PATHS[0], index)

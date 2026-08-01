@@ -62,7 +62,15 @@ function succeededPromotionEvidence(): FrontendDeploymentEvidence {
     outcome: 'succeeded',
     smoke: {
       apiProbeStatus: 404,
-      checkedPaths: ['/', '/login', '/approval-requests/example'],
+      checkedPaths: [
+        '/_frontend/health',
+        '/_frontend/identity',
+        '/',
+        '/login',
+        '/approval-requests/example',
+        '/v1/__frontend_deployment_probe__',
+      ],
+      frontendRevision: candidateRevision,
     },
   }
 }

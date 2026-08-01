@@ -264,11 +264,15 @@ describe('parseDeploymentManifest', () => {
   it.each([
     ['duplicate path', ['/login', '/login']],
     ['relative path', ['login']],
+    ['backslash path', ['/dashboard\\private']],
+    ['unescaped Unicode path', ['/профиль']],
+    ['literal dot segment', ['/dashboard/../login']],
     ['API root', ['/v1']],
     ['API child', ['/v1/users']],
     ['backend health', ['/health']],
     ['backend health child', ['/health/ready']],
     ['frontend health', ['/_frontend/health']],
+    ['frontend identity', ['/_frontend/identity']],
   ])('rejects smoke paths with %s', (_name, smokePaths) => {
     const error = expectInputError({ ...promotionManifest, smokePaths })
 

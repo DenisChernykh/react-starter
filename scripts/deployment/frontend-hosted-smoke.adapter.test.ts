@@ -9,6 +9,14 @@ import {
 const apiProbePath = '/v1/__frontend_deployment_probe__'
 const baseUrl = 'https://stage.example.test'
 const frontendHealthPath = '/_frontend/health'
+const frontendIdentityPath = '/_frontend/identity'
+const expectedRuntime = Object.freeze({
+  image: Object.freeze({
+    imageRef: 'ghcr.io/example/react-starter@sha256:' + 'a'.repeat(64),
+    revision: '1'.repeat(40),
+  }),
+  repository: 'example/react-starter',
+})
 
 interface RecordedFetch {
   readonly input: string | URL | Request
@@ -54,6 +62,20 @@ function htmlResponse(
   return new Response(body, { ...init, headers, status: init.status ?? 200 })
 }
 
+function identityResponse(
+  body = `https://github.com/example/react-starter\n${'1'.repeat(40)}\n`,
+  init: ResponseInit = {},
+): Response {
+  const headers = new Headers(init.headers)
+  if (!headers.has('cache-control')) {
+    headers.set('cache-control', 'private, no-store')
+  }
+  if (!headers.has('content-type')) {
+    headers.set('content-type', 'text/plain; charset=utf-8')
+  }
+  return new Response(body, { ...init, headers, status: init.status ?? 200 })
+}
+
 function apiProbeResponse(
   body = '{"type":"about:blank"}',
   init: ResponseInit = {},
@@ -76,6 +98,9 @@ function successfulRoutes(
     }
     if (path === frontendHealthPath) {
       return healthResponse()
+    }
+    if (path === frontendIdentityPath) {
+      return identityResponse()
     }
     if (path === apiProbePath) {
       return apiProbeResponse()
@@ -115,28 +140,36 @@ describe('FrontendHostedSmokeAdapter', () => {
 
     const result = await new FrontendHostedSmokeAdapter({
       fetchImplementation: fake.fetch,
-    }).verify(`${baseUrl}/`, [
-      '/login',
-      '/dashboard',
-      '/',
-      frontendHealthPath,
-      apiProbePath,
-    ])
+    }).verify(
+      `${baseUrl}/`,
+      [
+        '/login',
+        '/dashboard',
+        '/',
+        frontendHealthPath,
+        frontendIdentityPath,
+        apiProbePath,
+      ],
+      expectedRuntime,
+    )
 
     expect(result).toEqual({
       apiProbeStatus: 404,
       checkedPaths: [
         frontendHealthPath,
+        frontendIdentityPath,
         '/',
         '/login',
         '/dashboard',
         apiProbePath,
       ],
+      frontendRevision: '1'.repeat(40),
     })
     expect(
       fake.calls.map(({ input }) => new URL(input.toString()).pathname),
     ).toEqual(result.checkedPaths)
     expect(timeout.mock.calls).toEqual([
+      [10_000],
       [10_000],
       [10_000],
       [10_000],
@@ -174,7 +207,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(invalidUrl, ['/dashboard']),
+      }).verify(invalidUrl, ['/dashboard'], expectedRuntime),
       [
         invalidUrl,
         'private-user',
@@ -198,7 +231,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard', '/dashboard']),
+      }).verify(baseUrl, ['/dashboard', '/dashboard'], expectedRuntime),
     )
 
     expect(error).toMatchObject({
@@ -216,7 +249,7 @@ describe('FrontendHostedSmokeAdapter', () => {
       const error = await expectSafeSmokeFailure(
         new FrontendHostedSmokeAdapter({
           fetchImplementation: fake.fetch,
-        }).verify(baseUrl, [path]),
+        }).verify(baseUrl, [path], expectedRuntime),
         [path],
       )
 
@@ -261,7 +294,7 @@ describe('FrontendHostedSmokeAdapter', () => {
       const error = await expectSafeSmokeFailure(
         new FrontendHostedSmokeAdapter({
           fetchImplementation: fake.fetch,
-        }).verify(baseUrl, ['/dashboard']),
+        }).verify(baseUrl, ['/dashboard'], expectedRuntime),
         [privateBody],
       )
 
@@ -271,6 +304,63 @@ describe('FrontendHostedSmokeAdapter', () => {
         ...(status === undefined ? {} : { status }),
       })
       expect(fake.calls).toHaveLength(1)
+    },
+  )
+
+  it.each([
+    [
+      'status',
+      () => identityResponse('private-identity-body', { status: 404 }),
+      'identity_status',
+      404,
+    ],
+    [
+      'cache policy',
+      () =>
+        identityResponse(undefined, {
+          headers: { 'cache-control': 'public, max-age=60' },
+        }),
+      'identity_cache_control',
+      undefined,
+    ],
+    [
+      'content type',
+      () =>
+        identityResponse(undefined, {
+          headers: { 'content-type': 'application/json' },
+        }),
+      'identity_content_type',
+      undefined,
+    ],
+    [
+      'revision',
+      () =>
+        identityResponse(
+          `https://github.com/example/react-starter\n${'2'.repeat(40)}\n`,
+        ),
+      'identity_body',
+      undefined,
+    ],
+  ] as const)(
+    'rejects invalid frontend identity %s without exposing its body',
+    async (_name, response, rule, status) => {
+      const fake = successfulRoutes({
+        [frontendIdentityPath]: () => response(),
+      })
+
+      const error = await expectSafeSmokeFailure(
+        new FrontendHostedSmokeAdapter({
+          fetchImplementation: fake.fetch,
+        }).verify(baseUrl, ['/dashboard'], expectedRuntime),
+        ['private-identity-body'],
+      )
+
+      expect(error).toMatchObject({
+        path: frontendIdentityPath,
+        rule,
+        ...(status === undefined ? {} : { status }),
+      })
+      expect(fake.calls).toHaveLength(2)
     },
   )
 
@@ -302,7 +392,7 @@ describe('FrontendHostedSmokeAdapter', () => {
       const error = await expectSafeSmokeFailure(
         new FrontendHostedSmokeAdapter({
           fetchImplementation: fake.fetch,
-        }).verify(baseUrl, ['/dashboard']),
+        }).verify(baseUrl, ['/dashboard'], expectedRuntime),
         [privateBody],
       )
 
@@ -311,7 +401,7 @@ describe('FrontendHostedSmokeAdapter', () => {
         rule,
         ...(status === undefined ? {} : { status }),
       })
-      expect(fake.calls).toHaveLength(2)
+      expect(fake.calls).toHaveLength(3)
     },
   )
 
@@ -327,6 +417,15 @@ describe('FrontendHostedSmokeAdapter', () => {
       () =>
         apiProbeResponse('private-api-body', {
           headers: { 'content-type': 'text/html; charset=utf-8' },
+        }),
+      'api_content_type',
+      undefined,
+    ],
+    [
+      'frontend plain-text fallback',
+      () =>
+        apiProbeResponse('Not Found\n', {
+          headers: { 'content-type': 'text/plain' },
         }),
       'api_content_type',
       undefined,
@@ -348,7 +447,7 @@ describe('FrontendHostedSmokeAdapter', () => {
       const error = await expectSafeSmokeFailure(
         new FrontendHostedSmokeAdapter({
           fetchImplementation: fake.fetch,
-        }).verify(baseUrl, ['/dashboard']),
+        }).verify(baseUrl, ['/dashboard'], expectedRuntime),
         [privateBody],
       )
 
@@ -357,7 +456,7 @@ describe('FrontendHostedSmokeAdapter', () => {
         rule,
         ...(status === undefined ? {} : { status }),
       })
-      expect(fake.calls).toHaveLength(5)
+      expect(fake.calls).toHaveLength(6)
     },
   )
 
@@ -373,7 +472,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard']),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime),
       ['private-redirect-body', 'other.example.test'],
     )
 
@@ -382,8 +481,8 @@ describe('FrontendHostedSmokeAdapter', () => {
       rule: 'response_redirect',
       status: 302,
     })
-    expect(fake.calls).toHaveLength(2)
-    expect(fake.calls[1]?.init?.redirect).toBe('error')
+    expect(fake.calls).toHaveLength(3)
+    expect(fake.calls[2]?.init?.redirect).toBe('error')
   })
 
   it('redacts a TLS or transport failure and does not retry it', async () => {
@@ -395,7 +494,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard']),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime),
       [privateTransportReason],
     )
 
@@ -429,7 +528,7 @@ describe('FrontendHostedSmokeAdapter', () => {
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
         timeoutMs: 1,
-      }).verify(baseUrl, ['/dashboard']),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime),
       [privateTimeoutReason],
     )
 
@@ -466,7 +565,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard'], controller.signal),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime, controller.signal),
       [privateAbortReason],
     )
 
@@ -485,7 +584,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard'], controller.signal),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime, controller.signal),
       ['private-pre-abort-reason'],
     )
 
@@ -511,7 +610,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard']),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime),
       [privateBodyFailure],
     )
 
@@ -530,7 +629,7 @@ describe('FrontendHostedSmokeAdapter', () => {
     const error = await expectSafeSmokeFailure(
       new FrontendHostedSmokeAdapter({
         fetchImplementation: fake.fetch,
-      }).verify(baseUrl, ['/dashboard']),
+      }).verify(baseUrl, ['/dashboard'], expectedRuntime),
       ['private-health-body'],
     )
 

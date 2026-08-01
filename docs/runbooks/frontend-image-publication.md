@@ -15,6 +15,12 @@ Workflow сначала выполняет `pnpm check`, затем публик
 и единственный допустимый deployment reference — exact immutable digest вида
 `ghcr.io/<owner>/<repository>@sha256:...`.
 
+Image также содержит публичный `/_frontend/identity`: две строки с GitHub
+source repository и полным revision. Локальный OCI smoke сверяет этот ответ с
+OCI labels, а hosted smoke — с выбранным candidate. Identity помогает
+обнаружить чужой frontend runtime, но не заменяет exact digest: связь с digest
+до mutation доказывает проверка pulled OCI image.
+
 Успешный push/merge может создать проверенный candidate, но публикация не
 является deployment и не настраивает Dokploy/VPS.
 
@@ -61,9 +67,9 @@ key, VPS credentials и deployment secret сюда не добавляются. 
 
 ## Evidence levels
 
-| Evidence                      | Что доказывает                        | Чего не доказывает                           |
-| ----------------------------- | ------------------------------------- | -------------------------------------------- |
-| `pnpm check` в PR             | source gates в конкретном CI run      | image publication или hosted runtime         |
-| Stage image candidate summary | gate, scan и smoke конкретного digest | deployment этого digest                      |
-| Локальный `pnpm oci:check`    | local `linux/amd64` image contract    | remote CI, GHCR publication, Dokploy/VPS     |
-| Hosted probe                  | runtime конкретного host              | историю source/CI без связанных run и digest |
+| Evidence                      | Что доказывает                           | Чего не доказывает                          |
+| ----------------------------- | ---------------------------------------- | ------------------------------------------- |
+| `pnpm check` в PR             | source gates в конкретном CI run         | image publication или hosted runtime        |
+| Stage image candidate summary | gate, scan и smoke конкретного digest    | deployment этого digest                     |
+| Локальный `pnpm oci:check`    | local `linux/amd64` image contract       | remote CI, GHCR publication, Dokploy/VPS    |
+| Hosted probe                  | source/revision runtime конкретного host | exact digest без OCI preflight и историю CI |

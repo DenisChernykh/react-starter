@@ -5,6 +5,8 @@ import type {
   FrontendDeploymentManifest,
 } from './manifest.ts'
 import type {
+  DeploymentLease,
+  DeploymentLeasePort,
   DeploymentOperation,
   DokployApplication,
   DokployDeploymentRecord,
@@ -43,6 +45,7 @@ export interface DeploymentPreflightResult {
 export interface DeploymentOrchestratorDependencies {
   readonly publication: PublicationVerificationPort
   readonly image: ImageVerificationPort
+  readonly lease: DeploymentLeasePort
   readonly dokploy: DokployPort
   readonly smoke: HostedSmokePort
   readonly clock: ClockPort
@@ -129,7 +132,24 @@ function freezeSmoke(smoke: HostedSmokeResult): HostedSmokeResult {
   return Object.freeze({
     apiProbeStatus: smoke.apiProbeStatus,
     checkedPaths: Object.freeze([...smoke.checkedPaths]),
+    frontendRevision: smoke.frontendRevision,
   })
+}
+
+function requireInactiveDeployments(
+  deployments: readonly { readonly status: string }[],
+  step: string,
+): void {
+  if (
+    deployments.some(
+      (deployment) => !knownDeploymentStatuses.has(deployment.status),
+    )
+  ) {
+    fail(step, 'deployment_status')
+  }
+  if (deployments.some((deployment) => deployment.status === 'running')) {
+    fail(step, 'deployment_active')
+  }
 }
 
 function freezeEvidence(
@@ -162,13 +182,7 @@ function requireKnownState(
     fail('preflight', 'configured_image')
   }
 
-  if (
-    deployments.some(
-      (deployment) => !knownDeploymentStatuses.has(deployment.status),
-    )
-  ) {
-    fail('preflight', 'deployment_status')
-  }
+  requireInactiveDeployments(deployments, 'preflight')
 
   const successfulDeploymentCount = deployments.filter(
     (deployment) => deployment.status === 'done',
@@ -243,6 +257,19 @@ export async function runDeploymentPreflight(
       workflowRunUrl: manifest.workflowRunUrl,
     })
   })
+  const expectedCurrent = manifest.expectedCurrent
+  if (expectedCurrent !== null) {
+    await runReadStep('previous_image', signal, async () => {
+      await dependencies.image.verify({
+        image: expectedCurrent,
+        password: live.ghcrPassword,
+        registryUrl: live.ghcrRegistryUrl,
+        repository: manifest.repository,
+        signal,
+        username: live.ghcrUsername,
+      })
+    })
+  }
   const application = await runReadStep('application', signal, async () =>
     dependencies.dokploy.getApplication(live.dokployApplicationId, signal),
   )
@@ -332,6 +359,7 @@ export class FrontendDeploymentOrchestrator {
   ): Promise<string> {
     const startedAtMs = this.#dependencies.clock.nowMs()
     const state: OperationState = { mutationStarted: false }
+    let lease: DeploymentLease | undefined
     let sourceValidated = false
     let rollbackTarget: DeploymentImageReference | null = null
 
@@ -350,6 +378,16 @@ export class FrontendDeploymentOrchestrator {
           username: live.ghcrUsername,
         })
       })
+      lease = await runReadStep('lease_acquire', signal, async () =>
+        this.#dependencies.lease.acquire({
+          applicationId: live.dokployApplicationId,
+          environment: sourceEvidence.environment,
+          repository: sourceEvidence.repository,
+          revision: sourceEvidence.previous.revision,
+          signal,
+          token: live.githubToken,
+        }),
+      )
       const application = await runReadStep('application', signal, async () =>
         this.#dependencies.dokploy.getApplication(
           live.dokployApplicationId,
@@ -372,6 +410,7 @@ export class FrontendDeploymentOrchestrator {
             signal,
           ),
       )
+      requireInactiveDeployments(snapshot, 'rollback')
       const snapshotIds = new Set(
         snapshot.map(({ deploymentId }) => deploymentId),
       )
@@ -405,6 +444,10 @@ export class FrontendDeploymentOrchestrator {
         this.#dependencies.smoke.verify(
           sourceEvidence.publicBaseUrl,
           sourceEvidence.smokePaths,
+          {
+            image: sourceEvidence.previous,
+            repository: sourceEvidence.repository,
+          },
           signal,
         ),
       )
@@ -472,6 +515,10 @@ export class FrontendDeploymentOrchestrator {
         fail('evidence', 'failed')
       }
       throw failure
+    } finally {
+      if (lease !== undefined) {
+        await this.#releaseLease(lease, live.githubToken)
+      }
     }
   }
 
@@ -481,11 +528,31 @@ export class FrontendDeploymentOrchestrator {
   ): Promise<string> {
     const startedAtMs = this.#dependencies.clock.nowMs()
     const state: OperationState = { mutationStarted: false }
+    let lease: DeploymentLease | undefined
     let previous = input.manifest.expectedCurrent
 
     try {
       const preflight = await runDeploymentPreflight(input, this.#dependencies)
       previous = preflight.previous
+      lease = await runReadStep('lease_acquire', input.signal, async () =>
+        this.#dependencies.lease.acquire({
+          applicationId: input.live.dokployApplicationId,
+          environment: input.manifest.environment,
+          repository: input.manifest.repository,
+          revision: input.manifest.candidate.revision,
+          signal: input.signal,
+          token: input.live.githubToken,
+        }),
+      )
+      const lockedApplication = await runReadStep(
+        'locked_application',
+        input.signal,
+        async () =>
+          this.#dependencies.dokploy.getApplication(
+            input.live.dokployApplicationId,
+            input.signal,
+          ),
+      )
       const snapshot = await runReadStep(
         'deployment_snapshot',
         input.signal,
@@ -495,6 +562,7 @@ export class FrontendDeploymentOrchestrator {
             input.signal,
           ),
       )
+      requireKnownState(input.manifest, lockedApplication, snapshot)
       const snapshotIds = new Set(
         snapshot.map(({ deploymentId }) => deploymentId),
       )
@@ -531,6 +599,10 @@ export class FrontendDeploymentOrchestrator {
           this.#dependencies.smoke.verify(
             input.manifest.publicBaseUrl,
             input.manifest.smokePaths,
+            {
+              image: input.manifest.candidate,
+              repository: input.manifest.repository,
+            },
             input.signal,
           ),
       )
@@ -597,6 +669,18 @@ export class FrontendDeploymentOrchestrator {
         fail('evidence', 'failed')
       }
       throw failure
+    } finally {
+      if (lease !== undefined) {
+        await this.#releaseLease(lease, input.live.githubToken)
+      }
+    }
+  }
+
+  async #releaseLease(lease: DeploymentLease, token: string): Promise<void> {
+    try {
+      await this.#dependencies.lease.release({ lease, token })
+    } catch {
+      fail('lease_release', 'failed')
     }
   }
 

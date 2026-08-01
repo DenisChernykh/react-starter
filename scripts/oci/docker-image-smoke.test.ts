@@ -115,6 +115,13 @@ function healthyFetch(overrides = new Map<string, Response>()): typeof fetch {
       }),
     ],
     [
+      '/_frontend/identity',
+      httpResponse(`${expectedSource}\n${expectedRevision}\n`, 200, {
+        'cache-control': 'no-store',
+        'content-type': 'text/plain',
+      }),
+    ],
+    [
       '/',
       httpResponse(appHtml, 200, {
         'cache-control': 'no-cache',
@@ -611,6 +618,6 @@ describe('smokeDockerImage', () => {
       smokeDockerImage(input, { commands, fetchImplementation }),
     ).resolves.toBeUndefined()
 
-    expect(fetchCalls).toBe(15)
+    expect(fetchCalls).toBe(16)
   })
 })

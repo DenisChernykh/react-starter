@@ -77,6 +77,7 @@ function preflightHarness(options: PreflightHarnessOptions = {}): {
     'publication' | 'image' | 'dokploy'
   >
   readonly deploy: ReturnType<typeof vi.fn>
+  readonly imageVerify: ReturnType<typeof vi.fn>
   readonly updateImage: ReturnType<typeof vi.fn>
 } {
   const calls: string[] = []
@@ -94,10 +95,14 @@ function preflightHarness(options: PreflightHarnessOptions = {}): {
   ]
   const updateImage = vi.fn(async () => undefined)
   const deploy = vi.fn(async () => undefined)
+  const imageVerify = vi.fn(async () => {
+    calls.push('image')
+  })
 
   return {
     calls,
     deploy,
+    imageVerify,
     updateImage,
     dependencies: {
       publication: {
@@ -115,22 +120,7 @@ function preflightHarness(options: PreflightHarnessOptions = {}): {
         },
       },
       image: {
-        verify: async (input) => {
-          calls.push('image')
-          expect(input).toEqual({
-            image: {
-              imageRef: candidateImage,
-              revision: candidateRevision,
-            },
-            password: privateSecrets[2],
-            registryUrl: 'https://ghcr.io',
-            repository: 'example/react-starter',
-            signal: undefined,
-            username: 'package-reader',
-            workflowRunUrl:
-              'https://github.com/example/react-starter/actions/runs/123/attempts/1',
-          })
-        },
+        verify: imageVerify,
       },
       dokploy: {
         deploy,
@@ -181,9 +171,34 @@ describe('runDeploymentPreflight', () => {
     expect(harness.calls).toEqual([
       'publication',
       'image',
+      'image',
       'application',
       'deployments',
     ])
+    expect(harness.imageVerify).toHaveBeenNthCalledWith(1, {
+      image: {
+        imageRef: candidateImage,
+        revision: candidateRevision,
+      },
+      password: privateSecrets[2],
+      registryUrl: 'https://ghcr.io',
+      repository: 'example/react-starter',
+      signal: undefined,
+      username: 'package-reader',
+      workflowRunUrl:
+        'https://github.com/example/react-starter/actions/runs/123/attempts/1',
+    })
+    expect(harness.imageVerify).toHaveBeenNthCalledWith(2, {
+      image: {
+        imageRef: currentImage,
+        revision: currentRevision,
+      },
+      password: privateSecrets[2],
+      registryUrl: 'https://ghcr.io',
+      repository: 'example/react-starter',
+      signal: undefined,
+      username: 'package-reader',
+    })
     expect(harness.updateImage).not.toHaveBeenCalled()
     expect(harness.deploy).not.toHaveBeenCalled()
     expect(result).toEqual({
@@ -282,6 +297,15 @@ describe('runDeploymentPreflight', () => {
       [{ deploymentId: 'unknown', status: 'queued', title: 'unknown' }],
       'deployment_status',
     ],
+    [
+      'an active deployment',
+      { applicationId, dockerImage: currentImage, sourceType: 'docker' },
+      [
+        { deploymentId: 'previous', status: 'done', title: 'previous' },
+        { deploymentId: 'active', status: 'running', title: 'active' },
+      ],
+      'deployment_active',
+    ],
   ] as const)(
     'rejects promotion with %s',
     async (_name, application, deployments, category) => {
@@ -313,6 +337,12 @@ describe('runDeploymentPreflight', () => {
       [{ deploymentId: 'previous', status: 'done', title: 'previous' }],
       'bootstrap_history',
     ],
+    [
+      'an active deployment',
+      { applicationId, dockerImage: null, sourceType: 'docker' },
+      [{ deploymentId: 'active', status: 'running', title: 'active' }],
+      'deployment_active',
+    ],
   ] as const)(
     'rejects bootstrap with %s',
     async (_name, application, deployments, category) => {
@@ -338,6 +368,8 @@ interface OperationHarness {
   readonly deploy: ReturnType<typeof vi.fn>
   readonly evidenceWrites: FrontendDeploymentEvidence[]
   readonly evidenceAttemptCount: () => number
+  readonly leaseAcquire: ReturnType<typeof vi.fn>
+  readonly leaseRelease: ReturnType<typeof vi.fn>
   readonly sleeps: number[]
   readonly smoke: ReturnType<typeof vi.fn>
   readonly updateImage: ReturnType<typeof vi.fn>
@@ -351,6 +383,8 @@ interface OperationHarnessOptions {
   readonly pollResponses?: readonly (readonly DokployDeploymentRecord[])[]
   readonly repeatLastDeploymentResponse?: boolean
   readonly smokeFailure?: string
+  readonly smokeRevision?: string
+  readonly lockedApplication?: DokployApplication
 }
 
 function operationHarness(
@@ -399,9 +433,29 @@ function operationHarness(
   const deploy = vi.fn(async () => {
     calls.push('deploy')
   })
+  const lease = Object.freeze({
+    ref: 'refs/tags/frontend-deployment-lock/stage-fe0275c5a52b6627',
+    repository: 'example/react-starter',
+    revision: candidateRevision,
+  })
+  const leaseAcquire = vi.fn(async () => {
+    calls.push('lease_acquire')
+    return lease
+  })
+  const leaseRelease = vi.fn(async () => {
+    calls.push('lease_release')
+  })
   const smokeResult: HostedSmokeResult = Object.freeze({
     apiProbeStatus: 404,
-    checkedPaths: Object.freeze(['/', '/login', '/approval-requests/example']),
+    checkedPaths: Object.freeze([
+      '/_frontend/health',
+      '/_frontend/identity',
+      '/',
+      '/login',
+      '/approval-requests/example',
+      '/v1/__frontend_deployment_probe__',
+    ]),
+    frontendRevision: options.smokeRevision ?? candidateRevision,
   })
   const smoke = vi.fn(async () => {
     calls.push('smoke')
@@ -420,6 +474,8 @@ function operationHarness(
     deploy,
     evidenceAttemptCount: () => evidenceAttemptCount,
     evidenceWrites,
+    leaseAcquire,
+    leaseRelease,
     sleeps,
     smoke,
     updateImage,
@@ -434,15 +490,22 @@ function operationHarness(
           calls.push('image')
         },
       },
+      lease: {
+        acquire: leaseAcquire,
+        release: leaseRelease,
+      },
       dokploy: {
         deploy,
         getApplication: async () => {
           calls.push('application')
-          return {
+          const defaultApplication = {
             applicationId,
             dockerImage: mode === 'bootstrap' ? null : currentImage,
             sourceType: 'docker',
           }
+          return calls.filter((call) => call === 'application').length === 1
+            ? defaultApplication
+            : (options.lockedApplication ?? defaultApplication)
         },
         listDeployments: async () => {
           calls.push(`deployments:${deploymentRead}`)
@@ -515,8 +578,11 @@ describe('FrontendDeploymentOrchestrator successful apply', () => {
       expect(harness.calls).toEqual([
         'publication',
         'image',
+        ...(mode === 'promotion' ? ['image'] : []),
         'application',
         'deployments:0',
+        'lease_acquire',
+        'application',
         'deployments:1',
         'update',
         'deploy',
@@ -527,6 +593,7 @@ describe('FrontendDeploymentOrchestrator successful apply', () => {
         'deployments:4',
         'smoke',
         'evidence',
+        'lease_release',
       ])
       expect(harness.sleeps).toEqual([5_000, 5_000])
       expect(harness.updateImage).toHaveBeenCalledOnce()
@@ -545,8 +612,24 @@ describe('FrontendDeploymentOrchestrator successful apply', () => {
       expect(harness.smoke).toHaveBeenCalledWith(
         releaseManifest.publicBaseUrl,
         releaseManifest.smokePaths,
+        {
+          image: releaseManifest.candidate,
+          repository: releaseManifest.repository,
+        },
         undefined,
       )
+      expect(harness.leaseAcquire).toHaveBeenCalledWith({
+        applicationId,
+        environment: 'stage',
+        repository: 'example/react-starter',
+        revision: candidateRevision,
+        signal: undefined,
+        token: privateSecrets[1],
+      })
+      expect(harness.leaseRelease).toHaveBeenCalledWith({
+        lease: expect.objectContaining({ revision: candidateRevision }),
+        token: privateSecrets[1],
+      })
       expect(harness.evidenceWrites).toEqual([
         {
           applicationId,
@@ -567,7 +650,15 @@ describe('FrontendDeploymentOrchestrator successful apply', () => {
           schemaVersion: 1,
           smoke: {
             apiProbeStatus: 404,
-            checkedPaths: ['/', '/login', '/approval-requests/example'],
+            checkedPaths: [
+              '/_frontend/health',
+              '/_frontend/identity',
+              '/',
+              '/login',
+              '/approval-requests/example',
+              '/v1/__frontend_deployment_probe__',
+            ],
+            frontendRevision: candidateRevision,
           },
           smokePaths: releaseManifest.smokePaths,
           startedAt: '2025-01-01T00:00:00.000Z',
@@ -644,6 +735,30 @@ function expectFailedEvidence(
 }
 
 describe('FrontendDeploymentOrchestrator failure evidence', () => {
+  it('rechecks the configured image under the lease before mutation', async () => {
+    const harness = operationHarness('promotion', {
+      lockedApplication: {
+        applicationId,
+        dockerImage: 'ghcr.io/example/react-starter@sha256:' + 'c'.repeat(64),
+        sourceType: 'docker',
+      },
+    })
+
+    const error = await expectExecutionFailure(runPromotion(harness))
+
+    expect(error).toMatchObject({
+      category: 'current_drift',
+      step: 'preflight',
+    })
+    expect(harness.updateImage).not.toHaveBeenCalled()
+    expect(harness.deploy).not.toHaveBeenCalled()
+    expect(harness.leaseRelease).toHaveBeenCalledOnce()
+    expect(harness.calls.indexOf('lease_acquire')).toBeLessThan(
+      harness.calls.lastIndexOf('application'),
+    )
+    expect(harness.calls.at(-1)).toBe('lease_release')
+  })
+
   it('records abort after snapshot but before update as failed without mutation', async () => {
     const controller = new AbortController()
     const harness = operationHarness('promotion', {
@@ -907,6 +1022,7 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
         [previousDeployment, targetDeployment('running')],
         [previousDeployment, targetDeployment('done')],
       ],
+      smokeRevision: currentRevision,
     })
     const original = harness.dependencies
     const rollbackTitle = `frontend:rollback:${currentRevision}:1735689600000`
@@ -986,6 +1102,7 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
     expect(evidencePath).toBe('/safe/evidence.json')
     expect(harness.calls).toEqual([
       'image',
+      'lease_acquire',
       'application',
       'deployments:0',
       'update',
@@ -995,6 +1112,7 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
       'deployments:2',
       'smoke',
       'evidence',
+      'lease_release',
     ])
     expect(harness.updateImage).toHaveBeenCalledOnce()
     expect(harness.updateImage).toHaveBeenCalledWith(
@@ -1012,6 +1130,10 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
     expect(harness.smoke).toHaveBeenCalledWith(
       'https://stage.example.test',
       ['/approval-requests/example'],
+      {
+        image: sourceEvidence().previous,
+        repository: 'example/react-starter',
+      },
       undefined,
     )
     expect(harness.evidenceWrites).toEqual([
@@ -1031,7 +1153,15 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
         schemaVersion: 1,
         smoke: {
           apiProbeStatus: 404,
-          checkedPaths: ['/', '/login', '/approval-requests/example'],
+          checkedPaths: [
+            '/_frontend/health',
+            '/_frontend/identity',
+            '/',
+            '/login',
+            '/approval-requests/example',
+            '/v1/__frontend_deployment_probe__',
+          ],
+          frontendRevision: currentRevision,
         },
         smokePaths: ['/approval-requests/example'],
         startedAt: '2025-01-01T00:00:00.000Z',
@@ -1098,7 +1228,13 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
     )
 
     expect(error).toMatchObject({ category: 'current_drift', step: 'rollback' })
-    expect(harness.calls).toEqual(['image', 'application', 'evidence'])
+    expect(harness.calls).toEqual([
+      'image',
+      'lease_acquire',
+      'application',
+      'evidence',
+      'lease_release',
+    ])
     expect(harness.updateImage).not.toHaveBeenCalled()
     expect(harness.deploy).not.toHaveBeenCalled()
     expect(harness.evidenceWrites[0]).toMatchObject({
@@ -1109,5 +1245,42 @@ describe('FrontendDeploymentOrchestrator rollback boundary', () => {
       target: sourceEvidence().previous,
       workflowRunUrl: null,
     })
+  })
+
+  it('rejects an active deployment under the rollback lease', async () => {
+    const harness = rollbackHarness()
+    const dependencies: DeploymentOrchestratorDependencies = {
+      ...harness.dependencies,
+      dokploy: {
+        ...harness.dependencies.dokploy,
+        listDeployments: async () => {
+          harness.calls.push('deployments:active')
+          return [
+            previousDeployment,
+            {
+              deploymentId: 'deployment_active',
+              status: 'running',
+              title: 'another operator',
+            },
+          ]
+        },
+      },
+    }
+
+    const error = await expectExecutionFailure(
+      new FrontendDeploymentOrchestrator(dependencies).rollback(
+        sourceEvidence(),
+        live,
+        '/safe',
+      ),
+    )
+
+    expect(error).toMatchObject({
+      category: 'deployment_active',
+      step: 'rollback',
+    })
+    expect(harness.updateImage).not.toHaveBeenCalled()
+    expect(harness.deploy).not.toHaveBeenCalled()
+    expect(harness.leaseRelease).toHaveBeenCalledOnce()
   })
 })

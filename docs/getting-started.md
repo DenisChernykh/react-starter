@@ -424,17 +424,6 @@ git status --short
 - что commit опубликован;
 - что приложение развёрнуто.
 
-Если Docker daemon доступен, отдельно выполните OCI gate:
-
-```bash
-pnpm oci:check
-```
-
-Он локально собирает `linux/amd64` frontend image, проверяет image metadata и
-HTTP contract, затем удаляет созданные smoke container и image. Этот
-Docker-dependent gate не входит в `pnpm check`; его успешное завершение также
-не доказывает remote CI, GHCR publication или deployment.
-
 ## 11. Первый commit
 
 Перед commit убедитесь, что в status нет `.env*`, dependencies, build output
@@ -452,6 +441,20 @@ git add .
 git status --short
 git commit -m "chore: initialize project from react starter"
 ```
+
+После появления первого commit, если Docker daemon доступен, отдельно
+выполните OCI gate:
+
+```bash
+pnpm oci:check
+```
+
+Он читает revision и commit time из `HEAD`, локально собирает `linux/amd64`
+frontend image, проверяет image metadata, runtime identity и HTTP contract,
+затем удаляет созданные smoke container и image. Поэтому команда не может
+предшествовать первому commit. Этот Docker-dependent gate не входит в
+`pnpm check`; его успешное завершение также не доказывает remote CI, GHCR
+publication или deployment.
 
 Push выполняется только после добавления проверенного remote и отдельного
 разрешения на публикацию.

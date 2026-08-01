@@ -1,12 +1,19 @@
-import type { HostedSmokePort, HostedSmokeResult } from './ports.ts'
+import type {
+  HostedSmokeExpectation,
+  HostedSmokePort,
+  HostedSmokeResult,
+} from './ports.ts'
+import { isCanonicalSmokePath } from './smoke-path.ts'
 
 const API_PROBE_PATH = '/v1/__frontend_deployment_probe__'
 const DEFAULT_TIMEOUT_MS = 10_000
 const FRONTEND_HEALTH_PATH = '/_frontend/health'
+const FRONTEND_IDENTITY_PATH = '/_frontend/identity'
 const APP_ROOT_MARKER = '<div id="root">'
 const HTML_MEDIA_TYPE_PATTERN = /^text\/html(?:\s*;|$)/iu
+const PROBLEM_MEDIA_TYPE_PATTERN = /^application\/problem\+json(?:\s*;|$)/iu
+const TEXT_MEDIA_TYPE_PATTERN = /^text\/plain(?:\s*;|$)/iu
 const HTTPS_ORIGIN_INPUT_PATTERN = /^https:\/\/[^/?#\\\s]+\/?$/iu
-const SMOKE_PATH_PATTERN = /^\/(?!\/)[^\s?#\\]*$/u
 
 type FrontendHostedSmokeRule =
   | 'api_content_type'
@@ -17,6 +24,10 @@ type FrontendHostedSmokeRule =
   | 'health_body'
   | 'health_cache_control'
   | 'health_status'
+  | 'identity_body'
+  | 'identity_cache_control'
+  | 'identity_content_type'
+  | 'identity_status'
   | 'invalid_path'
   | 'request_aborted'
   | 'request_timeout'
@@ -95,7 +106,7 @@ function requireBaseOrigin(value: string): URL {
 }
 
 function requireSmokePath(path: string, baseOrigin: URL): void {
-  if (!SMOKE_PATH_PATTERN.test(path)) {
+  if (!isCanonicalSmokePath(path)) {
     throw new FrontendHostedSmokeError('smokePaths', 'invalid_path')
   }
 
@@ -129,12 +140,15 @@ function preparePaths(
   const ui = [
     ...new Set(
       ['/', '/login', ...smokePaths].filter(
-        (path) => path !== FRONTEND_HEALTH_PATH && path !== API_PROBE_PATH,
+        (path) =>
+          path !== FRONTEND_HEALTH_PATH &&
+          path !== FRONTEND_IDENTITY_PATH &&
+          path !== API_PROBE_PATH,
       ),
     ),
   ]
   return {
-    all: [FRONTEND_HEALTH_PATH, ...ui, API_PROBE_PATH],
+    all: [FRONTEND_HEALTH_PATH, FRONTEND_IDENTITY_PATH, ...ui, API_PROBE_PATH],
     ui,
   }
 }
@@ -154,6 +168,11 @@ function isHtml(headers: Headers): boolean {
   return (
     contentType !== null && HTML_MEDIA_TYPE_PATTERN.test(contentType.trim())
   )
+}
+
+function hasMediaType(headers: Headers, pattern: RegExp): boolean {
+  const contentType = headers.get('content-type')
+  return contentType !== null && pattern.test(contentType.trim())
 }
 
 function discardBody(response: Response): void {
@@ -185,12 +204,14 @@ export class FrontendHostedSmokeAdapter implements HostedSmokePort {
   async verify(
     publicBaseUrl: string,
     smokePaths: readonly string[],
+    expected: HostedSmokeExpectation,
     signal?: AbortSignal,
   ): Promise<HostedSmokeResult> {
     const baseOrigin = requireBaseOrigin(publicBaseUrl)
     const paths = preparePaths(smokePaths, baseOrigin)
 
     await this.verifyHealth(baseOrigin, signal)
+    await this.verifyIdentity(baseOrigin, expected, signal)
     for (const path of paths.ui) {
       await this.verifyUi(baseOrigin, path, signal)
     }
@@ -199,6 +220,7 @@ export class FrontendHostedSmokeAdapter implements HostedSmokePort {
     return Object.freeze({
       apiProbeStatus,
       checkedPaths: Object.freeze([...paths.all]),
+      frontendRevision: expected.image.revision,
     })
   }
 
@@ -338,6 +360,54 @@ export class FrontendHostedSmokeAdapter implements HostedSmokePort {
     }
   }
 
+  private async verifyIdentity(
+    baseOrigin: URL,
+    expected: HostedSmokeExpectation,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const { response, timeoutSignal } = await this.request(
+      baseOrigin,
+      FRONTEND_IDENTITY_PATH,
+      signal,
+    )
+    if (response.status !== 200) {
+      discardBody(response)
+      throw new FrontendHostedSmokeError(
+        FRONTEND_IDENTITY_PATH,
+        'identity_status',
+        response.status,
+      )
+    }
+    if (!hasNoStore(response.headers)) {
+      discardBody(response)
+      throw new FrontendHostedSmokeError(
+        FRONTEND_IDENTITY_PATH,
+        'identity_cache_control',
+      )
+    }
+    if (!hasMediaType(response.headers, TEXT_MEDIA_TYPE_PATTERN)) {
+      discardBody(response)
+      throw new FrontendHostedSmokeError(
+        FRONTEND_IDENTITY_PATH,
+        'identity_content_type',
+      )
+    }
+
+    const body = await this.readBody(
+      response,
+      FRONTEND_IDENTITY_PATH,
+      timeoutSignal,
+      signal,
+    )
+    const expectedBody = `https://github.com/${expected.repository.toLowerCase()}\n${expected.image.revision}\n`
+    if (body.toLowerCase() !== expectedBody) {
+      throw new FrontendHostedSmokeError(
+        FRONTEND_IDENTITY_PATH,
+        'identity_body',
+      )
+    }
+  }
+
   private async verifyApi(
     baseOrigin: URL,
     signal?: AbortSignal,
@@ -355,7 +425,7 @@ export class FrontendHostedSmokeAdapter implements HostedSmokePort {
         response.status,
       )
     }
-    if (isHtml(response.headers)) {
+    if (!hasMediaType(response.headers, PROBLEM_MEDIA_TYPE_PATTERN)) {
       discardBody(response)
       throw new FrontendHostedSmokeError(API_PROBE_PATH, 'api_content_type')
     }

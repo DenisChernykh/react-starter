@@ -3,7 +3,13 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack pnpm@11.15.1 install --frozen-lockfile
 COPY . .
+ARG BUILD_SOURCE
+ARG BUILD_REVISION
 RUN corepack pnpm@11.15.1 run build
+RUN printf '%s' "${BUILD_SOURCE}" | grep -Eq '^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' \
+    && printf '%s' "${BUILD_REVISION}" | grep -Eq '^[0-9a-f]{40}$' \
+    && mkdir -p /app/dist/_frontend \
+    && printf '%s\n%s\n' "${BUILD_SOURCE}" "${BUILD_REVISION}" > /app/dist/_frontend/identity
 
 FROM nginxinc/nginx-unprivileged:alpine3.23@sha256:6320020c7da8714feab524e02c08c5a1958675c4e68700e93a2fd8970b065786 AS runtime
 ARG BUILD_SOURCE

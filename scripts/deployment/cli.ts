@@ -15,6 +15,7 @@ import {
 } from './evidence-file.adapter.ts'
 import { FrontendHostedSmokeAdapter } from './frontend-hosted-smoke.adapter.ts'
 import { GithubWorkflowAdapter } from './github-workflow.adapter.ts'
+import { GithubDeploymentLeaseAdapter } from './github-deployment-lease.adapter.ts'
 import {
   parseDeploymentLiveEnvironment,
   type DeploymentLiveEnvironment,
@@ -64,6 +65,7 @@ function createDefaultAdapters(
     image: new DockerImageVerificationAdapter({
       commands: new ExecFileCommandRunner(),
     }),
+    lease: new GithubDeploymentLeaseAdapter(),
     publication: new GithubWorkflowAdapter(),
     smoke: new FrontendHostedSmokeAdapter(),
   }

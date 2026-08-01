@@ -5,7 +5,10 @@ import {
   type CommandPort,
   type CommandResult,
 } from '../lib/command-runner.ts'
-import { verifyFrontendHttpContract } from './frontend-http-contract.ts'
+import {
+  verifyFrontendHttpContract,
+  type FrontendRuntimeIdentity,
+} from './frontend-http-contract.ts'
 
 const COMMAND_TIMEOUT_MS = 30_000
 const READINESS_TIMEOUT_MS = 20_000
@@ -153,7 +156,7 @@ function parseImageConfig(stdout: string): Record<string, unknown> {
 function requireImageMetadata(
   config: Record<string, unknown>,
   input: DockerImageSmokeInput,
-): void {
+): FrontendRuntimeIdentity {
   if (config.User !== '101') {
     throw new DockerImageSmokeError('runtime user')
   }
@@ -196,6 +199,8 @@ function requireImageMetadata(
   ) {
     throw new DockerImageSmokeError('OCI labels')
   }
+
+  return Object.freeze({ revision, source })
 }
 
 function isSafeHttpsUrl(value: string): boolean {
@@ -324,7 +329,7 @@ export async function smokeDockerImage(
     }),
     'image inspect',
   )
-  requireImageMetadata(parseImageConfig(inspect.stdout), input)
+  const identity = requireImageMetadata(parseImageConfig(inspect.stdout), input)
 
   const containerName = `react-starter-oci-smoke-${process.pid}-${randomUUID()}`
   let containerMayExist = false
@@ -366,7 +371,7 @@ export async function smokeDockerImage(
     )
 
     await waitForHttpReadiness(baseUrl, fetchImplementation)
-    await verifyFrontendHttpContract(baseUrl, fetchImplementation)
+    await verifyFrontendHttpContract(baseUrl, identity, fetchImplementation)
 
     requireSuccessfulCommand(
       await commands.run('docker', ['stop', '--time', '10', containerName], {

@@ -49,22 +49,29 @@ ingress routing.
 ## Health и misrouting probes
 
 `/_frontend/health` принадлежит только frontend image и возвращает `200 ok`.
-Ingress может использовать его как upstream health probe для public/admin
-frontend. Не путайте его с backend readiness/liveness endpoints.
+`/_frontend/identity` также принадлежит image и возвращает `text/plain` с
+source repository и полным build revision. Оба ответа имеют `Cache-Control:
+no-store`. Ingress может использовать health как upstream probe, а deployment
+operator использует identity, чтобы привязать публичный host к candidate. Не
+путайте их с backend readiness/liveness endpoints.
 
 Перед эксплуатацией проверьте каждый public и admin host:
 
 ```bash
 curl -i https://public.example.test/_frontend/health
 curl -i https://admin.example.test/_frontend/health
+curl -i https://public.example.test/_frontend/identity
+curl -i https://admin.example.test/_frontend/identity
 curl -i https://public.example.test/v1/__frontend_deployment_probe__
 curl -i https://admin.example.test/health/__frontend_deployment_probe__
 ```
 
-Первые два probe должны попасть в соответствующий frontend. Два API/health
-probe должны получить ответ backend и никогда не HTML frontend shell. Подберите
-безопасный несуществующий path, который backend обработает как non-HTML `404`;
-не включайте credentials, cookies или secrets в diagnostic commands.
+Health и identity probes должны попасть в соответствующий frontend. Два
+API/health probe должны получить контролируемый backend `4xx` с media type
+`application/problem+json`; просто non-HTML или `text/plain 404` недостаточно,
+потому что так же отвечает защитный frontend location. Подберите безопасный
+несуществующий path, который backend обрабатывает как Problem Details; не
+включайте credentials, cookies или secrets в diagnostic commands.
 
 ## TLS и security ownership
 
