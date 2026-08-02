@@ -48,8 +48,8 @@ capability создавай отдельным vertical slice по той же �
 
 1. Выполни `git status --short --branch`, определи branch и сохрани чужие
    изменения, untracked files и worktrees.
-2. Проверь `node --version` и `pnpm --version`. Проект закреплён на Node
-   `24.18.0` и pnpm `11.15.1`.
+2. Проверь `node --version` и `pnpm --version`. Проект принимает Node 24.x
+   (`>=24 <25`) и использует pnpm `11.15.1`.
 3. Определи, работаешь ли ты в исходном starter или в уже созданной product
    copy.
 4. Прочитай профильный документ из таблицы выше.

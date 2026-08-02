@@ -32,13 +32,13 @@ AI-агент также должен начать с [AGENTS.md](AGENTS.md).
 
 ## Требования
 
-- Node.js 24.18.0
+- Node.js 24.x (`>=24 <25`)
 - pnpm 11.15.1
 
 ## Локальный запуск
 
 ```bash
-pnpm install --frozen-lockfile
+pnpm install
 pnpm dev
 ```
 

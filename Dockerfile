@@ -1,11 +1,11 @@
 FROM node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS build
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack pnpm@11.15.1 install --frozen-lockfile
+RUN corepack enable && pnpm install --frozen-lockfile
 COPY . .
 ARG BUILD_SOURCE
 ARG BUILD_REVISION
-RUN corepack pnpm@11.15.1 run build
+RUN pnpm run build
 RUN printf '%s' "${BUILD_SOURCE}" | grep -Eq '^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' \
     && printf '%s' "${BUILD_REVISION}" | grep -Eq '^[0-9a-f]{40}$' \
     && mkdir -p /app/dist/_frontend \
