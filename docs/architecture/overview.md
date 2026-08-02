@@ -34,21 +34,21 @@
 Актуальные версии определяются `package.json` и `pnpm-lock.yaml`. Основные
 границы текущего starter:
 
-| Область         | Реализация                           |
-| --------------- | ------------------------------------ |
-| Runtime         | Node.js `24.18.0`, pnpm `11.15.1`    |
-| UI runtime      | React 19                             |
-| Build           | Vite 8, TypeScript 6                 |
-| Routing         | React Router 8, Data Mode            |
-| Server state    | TanStack Query 5                     |
-| HTTP transport  | Axios                                |
-| API generation  | Orval 8                              |
-| Runtime schemas | Zod 4                                |
-| Forms           | React Hook Form                      |
-| Styles          | Tailwind CSS 4                       |
-| UI primitives   | shadcn source на Base UI, стиль Lyra |
-| Architecture    | Feature-Sliced Design, Steiger       |
-| Tests           | Vitest, Testing Library, MSW         |
+| Область         | Реализация                                  |
+| --------------- | ------------------------------------------- |
+| Runtime         | Node.js `24.x` (`>=24 <25`), pnpm `11.15.1` |
+| UI runtime      | React 19                                    |
+| Build           | Vite 8, TypeScript 6                        |
+| Routing         | React Router 8, Data Mode                   |
+| Server state    | TanStack Query 5                            |
+| HTTP transport  | Axios                                       |
+| API generation  | Orval 8                                     |
+| Runtime schemas | Zod 4                                       |
+| Forms           | React Hook Form                             |
+| Styles          | Tailwind CSS 4                              |
+| UI primitives   | shadcn source на Base UI, стиль Lyra        |
+| Architecture    | Feature-Sliced Design, Steiger              |
+| Tests           | Vitest, Testing Library, MSW                |
 
 Не обновляйте версии «по памяти». Изменение библиотек, их конфигурации или CLI
 требует проверки текущей официальной документации и отдельной задачи.

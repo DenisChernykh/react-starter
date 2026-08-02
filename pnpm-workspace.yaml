@@ -1,5 +1,6 @@
 allowBuilds:
   esbuild: true
   msw: true
+verifyDepsBeforeRun: error
 minimumReleaseAgeExclude:
   - eslint-plugin-jsdoc@63.3.1

@@ -27,7 +27,7 @@
 
 - macOS/Linux shell с `rsync`;
 - Git;
-- Node.js `24.18.0`;
+- Node.js 24.x (`>=24 <25`);
 - pnpm `11.15.1`;
 - локальная папка `react-starter`;
 - backend с совместимым OpenAPI, cookie auth, CSRF и Problem Details;
@@ -259,21 +259,24 @@ node --version
 pnpm --version
 ```
 
-Ожидается:
+Первая строка должна начинаться с `v24.`; точный patch зависит от актуального
+установленного Node 24:
 
 ```text
-v24.18.0
+v24.x
 11.15.1
 ```
 
-Установите ровно lockfile:
+Для чистого bootstrap выполните отдельный frozen gate:
 
 ```bash
 pnpm install --frozen-lockfile
 ```
 
-Не обновляйте зависимости во время bootstrap. Upgrade — отдельная задача с
-проверкой текущей документации библиотек и новым lockfile diff.
+Для обычной локальной синхронизации используйте `pnpm install`; не применяйте
+`--frozen-lockfile` как routine workaround. Не обновляйте зависимости во время
+bootstrap. Upgrade — отдельная задача с проверкой текущей документации
+библиотек и новым lockfile diff.
 
 ## 7. Подключить backend OpenAPI
 
@@ -462,8 +465,8 @@ Push выполняется только после добавления про�
 
 | Симптом                                  | Вероятная граница                 | Что проверить                                       |
 | ---------------------------------------- | --------------------------------- | --------------------------------------------------- |
-| pnpm сообщает unsupported engine         | shell выбрал другой Node          | `nvm use`, `node --version`                         |
-| install меняет lockfile                  | выполнен upgrade или не тот pnpm  | pnpm `11.15.1`, `--frozen-lockfile`                 |
+| pnpm сообщает unsupported engine         | shell выбрал Node вне 24.x        | `nvm use`, `node --version`                         |
+| install меняет lockfile                  | выполнен upgrade или не тот pnpm  | pnpm `11.15.1`; frozen только для clean/CI gate     |
 | `api:sync` не находит операцию           | несовместимый backend snapshot    | source path, `operationId`, required operations     |
 | `api:check` показывает diff              | snapshot/generated drift          | выполнить осознанный `api:update`, просмотреть diff |
 | white screen                             | route loader ждёт/получил ошибку  | `/v1/auth/me`, backend health, route error          |
@@ -485,7 +488,7 @@ Push выполняется только после добавления про�
 
 ### Local gates
 
-- используются Node `24.18.0` и pnpm `11.15.1`;
+- используются Node 24.x и pnpm `11.15.1`;
 - `pnpm check` завершился с exit code `0`;
 - при доступном Docker `pnpm oci:check` завершился с exit code `0`;
 - `git diff --check` не показывает ошибок;

@@ -129,10 +129,21 @@ describe('frontend GitHub workflows', () => {
         .filter(Boolean),
     ).toEqual([
       'corepack enable',
-      expect.stringContaining('test "$(node --version)" = "v24.18.0"'),
+      expect.stringContaining("node --version | grep -Eq '^v24\\.'"),
       'pnpm install --frozen-lockfile',
       'pnpm check',
     ])
+    for (const job of [gate, publish]) {
+      const setupNode = requireSteps(job).find(
+        (step) => step.uses === actionPins.setupNode,
+      )
+      expect(requireRecord(setupNode?.with, 'setup-node inputs')).toMatchObject(
+        { 'node-version': 24 },
+      )
+      expect(requireStep(job, { name: 'Verify locked toolchain' }).run).toEqual(
+        expect.stringContaining("node --version | grep -Eq '^v24\\.'"),
+      )
+    }
     await expect(
       readFile('.github/workflows/ci.yml', 'utf8'),
     ).rejects.toMatchObject({ code: 'ENOENT' })
