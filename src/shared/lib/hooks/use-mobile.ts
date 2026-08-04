@@ -2,7 +2,6 @@ import * as React from 'react'
 
 const MOBILE_BREAKPOINT = 768
 
-// eslint-disable-next-line jsdoc/require-jsdoc -- Copied Base/Lyra registry hook.
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 

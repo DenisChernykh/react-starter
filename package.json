@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:tsdoc": "eslint . --config eslint.tsdoc.config.js",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
