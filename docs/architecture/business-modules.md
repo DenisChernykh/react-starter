@@ -127,8 +127,8 @@ frontend-текстом.
    routes должны оставаться под существующим session loader.
 7. Зафиксируйте server-response cache writes, CSRF/auth revalidation,
    permission UX и stable error-code/pointer policy тестами.
-8. Добавьте русскоязычный TSDoc к новым или изменённым handwritten exports и
-   запустите `pnpm check` вместе с релевантными browser/runtime проверками.
+8. Запустите `pnpm check` вместе с релевантными browser/runtime проверками.
+   Если задача явно включает TSDoc, дополнительно выполните `pnpm lint:tsdoc`.
 
 Не изобретайте frontend capability, которой нет в OpenAPI. В частности, не
 добавляйте list, pagination, search, localStorage/history последних UUID,

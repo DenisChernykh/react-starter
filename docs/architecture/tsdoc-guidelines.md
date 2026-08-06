@@ -1,6 +1,8 @@
 # Руководство по TSDoc
 
-Этот документ определяет стандарт TSDoc для `react-starter`.
+Этот документ описывает отдельную, явно запрошенную TSDoc-задачу для
+`react-starter`. Обычная разработка и `pnpm check` не требуют добавлять или
+обновлять TSDoc.
 
 ## Цель
 
@@ -10,7 +12,8 @@
 
 ## Область действия
 
-Пиши TSDoc для экспортируемого рукописного TypeScript/TSX API:
+Если задача посвящена TSDoc, документируй экспортируемый рукописный
+TypeScript/TSX API:
 
 - `export function`;
 - React-компонентов;
@@ -22,6 +25,15 @@
 
 - `src/shared/api/generated/**`;
 - `src/shared/api/generated-zod/**`.
+
+Проверка запускается отдельно:
+
+```bash
+pnpm lint:tsdoc
+```
+
+Она выводит замечания как warnings и не является частью `pnpm lint` или
+`pnpm check`.
 
 ## Стиль
 

@@ -64,8 +64,8 @@ Frontend доступен на `http://localhost:5173`. Для browser-auth back
   вертикальный путь от backend OpenAPI до route page.
 - [Shared UI](docs/architecture/ui-guidelines.md) — владельцы controls,
   loading, fields, container и dialogs.
-- [TSDoc](docs/architecture/tsdoc-guidelines.md) — контракт handwritten
-  exports.
+- [TSDoc](docs/architecture/tsdoc-guidelines.md) — отдельная необязательная
+  задача документирования handwritten exports.
 - [Same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) —
   подготовка маршрутизации public/admin/API hosts.
 - [Публикация frontend image](docs/runbooks/frontend-image-publication.md) —
@@ -112,10 +112,11 @@ OPENAPI_SPEC_SOURCE=/absolute/path/to/backend/openapi.json pnpm api:update
 
 ```bash
 pnpm check
+pnpm lint:tsdoc # отдельная необязательная проверка TSDoc
 pnpm oci:check
 ```
 
-Команда последовательно проверяет OpenAPI drift, форматирование, ESLint, FSD-архитектуру, тесты и production build.
+Команда последовательно проверяет OpenAPI drift, форматирование, ESLint, FSD-архитектуру, тесты и production build. TSDoc в неё не входит.
 
 `pnpm oci:check` — отдельная Docker-dependent проверка: она локально собирает
 `linux/amd64` image и проверяет его HTTP/metadata contract. Она не входит в

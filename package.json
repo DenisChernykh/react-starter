@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:tsdoc": "eslint . --config eslint.tsdoc.config.js",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -26,7 +27,11 @@
     "api:update": "pnpm api:sync && pnpm api:generate",
     "api:check": "pnpm api:generate && git diff --exit-code -- openapi/openapi.json src/shared/api/generated src/shared/api/generated-zod",
     "architecture": "CHOKIDAR_USEPOLLING=1 steiger ./src",
-    "check": "pnpm api:check && pnpm format:check && pnpm lint && pnpm architecture && pnpm test && pnpm build"
+    "check": "pnpm api:check && pnpm format:check && pnpm lint && pnpm architecture && pnpm test && pnpm build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{css,html,js,jsx,json,md,mjs,ts,tsx}": "prettier --write"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -64,7 +69,9 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "husky": "9.1.7",
     "jsdom": "29.1.1",
+    "lint-staged": "^17.3.0",
     "msw": "2.15.0",
     "orval": "8.23.0",
     "prettier": "3.9.6",

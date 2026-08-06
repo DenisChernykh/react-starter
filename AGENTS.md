@@ -32,7 +32,7 @@ capability создавай отдельным vertical slice по той же �
 | Понять состав и runtime flows          | [архитектурный обзор](docs/architecture/overview.md)                                                                                            |
 | Подключить бизнес-модуль               | [business module guide](docs/architecture/business-modules.md)                                                                                  |
 | Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                             |
-| Изменить handwritten export            | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md)                                                                                       |
+| Выполнить отдельную TSDoc-задачу       | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md) и `pnpm lint:tsdoc`                                                                   |
 | Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
 | Выполнить deployment или rollback      | [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) и [explicit rollback](docs/runbooks/frontend-dokploy-rollback.md)              |
 
@@ -236,13 +236,10 @@ remote CI, GHCR publication или deployment.
 
 ## TSDoc
 
-1. Следуй [руководству по TSDoc](docs/architecture/tsdoc-guidelines.md) для всех новых и изменённых рукописных API.
-2. Добавляй или актуализируй TSDoc для каждого нового или изменённого экспортируемого рукописного API: функций, React-компонентов, хуков, типов, интерфейсов, enum, экспортируемых констант, вспомогательных функций, конфигураций, маппингов и ключей кеша.
-3. Для приватных помощников TSDoc нужен, если их контракт, побочные эффекты, fallback-поведение или инварианты неочевидны из реализации и имени.
-4. Тесты не требуют TSDoc, если их намерение ясно из `describe` и `it`. Вспомогательные декларации документируй только когда они экспортируются или имеют неочевидный контракт.
-5. Не добавляй TSDoc и не редактируй вручную сгенерированные файлы.
-6. Перед завершением работы сопоставь изменённые экспортируемые рукописные API с руководством и их русскоязычным TSDoc.
-7. ESLint предупреждает о пропущенном или пустом TSDoc для прямых ESM-экспортов в рукописных `.ts` и `.tsx` файлах. Он не заменяет проверку смыслового контракта из руководства.
+1. Не добавляй и не актуализируй TSDoc по умолчанию: это отдельная задача, которую пользователь запрашивает явно.
+2. Для такой задачи следуй [руководству](docs/architecture/tsdoc-guidelines.md) и запускай `pnpm lint:tsdoc`.
+3. Команда выводит пропущенный или пустой TSDoc для direct ESM-экспортов как warning; она не входит в `pnpm lint` или `pnpm check`.
+4. Не документируй вручную сгенерированные файлы.
 
 ## UI-компоненты
 
