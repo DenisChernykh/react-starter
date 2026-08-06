@@ -158,14 +158,13 @@ cleanup() {
   rmdir "$LOCK_DIR" 2>/dev/null || true
 }
 trap cleanup EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
 ```
 
-cleanup привязан только к EXIT; signal traps явно завершают shell и тем самым
-сначала запускают тот же EXIT cleanup. Held/stale lock останавливает процедуру
-и требует human verification; его нельзя удалять автоматически.
+cleanup привязан только к EXIT. Signal traps устанавливаются вместе с mutation
+step ниже: при прерывании уже начатого deployment они сначала публикуют
+indeterminate target record, а затем запускают тот же EXIT cleanup. Held/stale
+lock останавливает процедуру и требует human verification; его нельзя удалять
+автоматически.
 
 ## Effective Compose identity и alias preflight
 
@@ -215,9 +214,19 @@ verify_edge_alias() {
   done
 }
 
+single_frontend_container_id() {
+  frontend_env_file=$1
+  if ! frontend_ids=$(docker compose --env-file "$frontend_env_file" \
+    -f "$COMPOSE_FILE" ps --all -q frontend 2>/dev/null); then
+    return 1
+  fi
+  set -- $frontend_ids
+  [ "$#" -eq 1 ] || return 1
+  printf '%s\n' "$1"
+}
+
 verify_effective_compose_identity "$TARGET_ENV_FILE"
-if ! CURRENT_CONTAINER_ID=$(docker compose --env-file "$TARGET_ENV_FILE" \
-  -f "$COMPOSE_FILE" ps -q frontend 2>/dev/null); then
+if ! CURRENT_CONTAINER_ID=$(single_frontend_container_id "$TARGET_ENV_FILE"); then
   fail 'current frontend lookup failed'
 fi
 if ! verify_edge_alias \
@@ -352,17 +361,58 @@ record_failed_target() {
   record_no_clobber "$target_env_file" "$FAILED_ENV_RECORD"
 }
 
+handle_signal() {
+  signal_status=$1
+  if [ -n "${MUTATION_TARGET_ENV_FILE:-}" ]; then
+    record_failed_target "$MUTATION_TARGET_ENV_FILE"
+  fi
+  exit "$signal_status"
+}
+trap 'handle_signal 129' HUP
+trap 'handle_signal 130' INT
+trap 'handle_signal 143' TERM
+
+verify_current_live_state() {
+  current_env_file=$1
+  if ! CURRENT_EFFECTIVE_IMAGE=$(docker compose --env-file "$current_env_file" \
+    -f "$COMPOSE_FILE" config --images 2>/dev/null); then
+    fail 'current effective image lookup failed before saving previous record'
+  fi
+  set -- $CURRENT_EFFECTIVE_IMAGE
+  [ "$#" -eq 1 ] || fail 'current effective image must contain exactly one image'
+  CURRENT_EFFECTIVE_IMAGE=$1
+  if ! printf '%s\n' "$CURRENT_EFFECTIVE_IMAGE" | \
+    grep -Eq '^ghcr\.io/[a-z0-9][a-z0-9._/-]*@sha256:[0-9a-f]{64}$'; then
+    fail 'current effective image must be an exact lowercase GHCR digest'
+  fi
+  if ! CURRENT_CONTAINER_ID=$(single_frontend_container_id "$current_env_file"); then
+    fail 'current frontend lookup failed before saving previous record'
+  fi
+  if ! LIVE_IMAGE=$(docker inspect "$CURRENT_CONTAINER_ID" \
+    --format '{{.Config.Image}}' 2>/dev/null); then
+    fail 'live image inspect failed before saving previous record'
+  fi
+  [ "$LIVE_IMAGE" = "$CURRENT_EFFECTIVE_IMAGE" ] ||
+    fail 'current env/live image drift before saving previous record'
+  if ! HEALTH_STATUS=$(docker inspect "$CURRENT_CONTAINER_ID" \
+    --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null); then
+    fail 'current health inspect failed before saving previous record'
+  fi
+  [ "$HEALTH_STATUS" = healthy ] ||
+    fail 'current frontend is not healthy before saving previous record'
+}
+
 deploy_target_once() {
   resolved_image=$1
   deployed_target_env_file=$2
+  MUTATION_TARGET_ENV_FILE=$deployed_target_env_file
 
   if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
     up --detach --wait --wait-timeout "$WAIT_TIMEOUT" --pull never frontend; then
     record_failed_target "$deployed_target_env_file"
     fail 'compose up failed; target recorded for human verification'
   fi
-  if ! CURRENT_CONTAINER_ID=$(docker compose --env-file "$ENV_FILE" \
-    -f "$COMPOSE_FILE" ps -q frontend 2>/dev/null); then
+  if ! CURRENT_CONTAINER_ID=$(single_frontend_container_id "$ENV_FILE"); then
     record_failed_target "$deployed_target_env_file"
     fail 'frontend lookup failed after up; target recorded'
   fi
@@ -374,11 +424,6 @@ deploy_target_once() {
   if [ "$LIVE_IMAGE" != "$resolved_image" ]; then
     record_failed_target "$deployed_target_env_file"
     fail 'live image drift after up; target recorded'
-  fi
-  if ! docker inspect "$CURRENT_CONTAINER_ID" \
-    --format '{{json .State.Health}}' >/dev/null 2>/dev/null; then
-    record_failed_target "$deployed_target_env_file"
-    fail 'health inspect failed after up; target recorded'
   fi
   if ! verify_edge_alias \
     "$EFFECTIVE_FRONTEND_EDGE_NETWORK" \
@@ -392,14 +437,24 @@ deploy_target_once() {
     record_failed_target "$deployed_target_env_file"
     fail 'hosted routing check failed; target recorded'
   fi
+  if ! HEALTH_STATUS=$(docker inspect "$CURRENT_CONTAINER_ID" \
+    --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null); then
+    record_failed_target "$deployed_target_env_file"
+    fail 'health inspect failed after hosted checks; target recorded'
+  fi
+  if [ "$HEALTH_STATUS" != healthy ]; then
+    record_failed_target "$deployed_target_env_file"
+    fail 'frontend is not healthy after hosted checks; target recorded'
+  fi
+  MUTATION_TARGET_ENV_FILE=''
 }
 ```
 
 deploy_target_once is the only mutation step and contains exactly one Compose
 up. It is called only after target preflight, and after record_no_clobber for
 promotion. Callers perform install_current_env exactly once immediately before
-it. Every up and hosted checker failure records the target before stopping; there
-is never an automatic rollback.
+it. Every up, post-up, hosted checker and signal-interrupted mutation records
+the target before stopping; there is never an automatic rollback.
 
 ## Bootstrap
 
@@ -425,10 +480,12 @@ workflow URL from the same summary. Under the checked operation lock:
    identity with verify_target_preflight;
 2. run the shared-lock alias preflight and authenticated target pull/OCI label
    comparisons; target preflight performs both and no up;
-3. save current known-good ENV_FILE with
+3. run verify_current_live_state "$ENV_FILE" to prove the current effective
+   digest, one live container and its healthy state before preserving it;
+4. save current known-good ENV_FILE with
    record_no_clobber "$ENV_FILE" "$PREVIOUS_ENV_RECORD";
-4. run install_current_env "$TARGET_ENV_FILE" exactly once;
-5. run deploy_target_once "$RESOLVED_FRONTEND_IMAGE" "$TARGET_ENV_FILE"
+5. run install_current_env "$TARGET_ENV_FILE" exactly once;
+6. run deploy_target_once "$RESOLVED_FRONTEND_IMAGE" "$TARGET_ENV_FILE"
    exactly once.
 
 The previous record is the exact rollback target for this promotion. A failed,
@@ -451,8 +508,7 @@ if ! CURRENT_RESOLVED_FRONTEND_IMAGE="$($COMPOSE_IMAGE_HELPER \
 fi
 [ "$CURRENT_RESOLVED_FRONTEND_IMAGE" = "$FAILED_CANDIDATE_IMAGE" ] ||
   fail 'current env image drift before rollback'
-if ! CURRENT_CONTAINER_ID=$(docker compose --env-file "$ENV_FILE" \
-  -f "$COMPOSE_FILE" ps -q frontend 2>/dev/null); then
+if ! CURRENT_CONTAINER_ID=$(single_frontend_container_id "$ENV_FILE"); then
   fail 'current frontend lookup failed before rollback'
 fi
 if ! LIVE_IMAGE=$(docker inspect "$CURRENT_CONTAINER_ID" \
@@ -492,7 +548,7 @@ Read-only local checks after a successful operation:
 ```bash
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=150 --no-color frontend
-CONTAINER_ID="$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q frontend)"
+CONTAINER_ID="$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps --all -q frontend)"
 docker inspect "$CONTAINER_ID" --format '{{json .State.Health}}'
 docker inspect "$CONTAINER_ID" --format '{{json .NetworkSettings.Ports}}'
 ```

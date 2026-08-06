@@ -397,6 +397,7 @@ fail() {
   printf '%s\\n' "$1" >&2
   exit 1
 }
+
 verify_edge_alias() {
   return 0
 }
@@ -421,6 +422,144 @@ deploy_target_once "$TEST_RESOLVED_IMAGE" "$TEST_ROLLBACK_ENV"
 
     return {
       failedRecord: await readFile(join(directory, failedRecords[0]), 'utf8'),
+      result,
+    }
+  } finally {
+    await rm(directory, { force: true, recursive: true })
+  }
+}
+
+async function runUnhealthyDeploymentContract(): Promise<{
+  readonly failedRecords: readonly string[]
+  readonly result: CommandResult
+}> {
+  const directory = await mkdtemp(join(tmpdir(), 'react-starter-health-'))
+  try {
+    const runbook = await readFile(
+      'docs/runbooks/frontend-compose-deployment.md',
+      'utf8',
+    )
+    const operationBlock = extractBashBlock(
+      runbook,
+      '## Host-only records and checked deployment step',
+    )
+    const fakeDockerPath = join(directory, 'docker')
+    const targetEnvPath = join(directory, 'target.env')
+    const scriptPath = join(directory, 'health-contract.sh')
+    const expectedImage =
+      'ghcr.io/example/react-starter@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+    await writeExecutable(
+      fakeDockerPath,
+      String.raw`#!/bin/sh
+set -eu
+case "$*" in
+  *'compose'*'up'*) exit 0 ;;
+  *'compose'*'ps'*) printf '%s\n' container-id ;;
+  *'inspect'*'Config.Image'*) printf '%s\n' "$TEST_EXPECTED_IMAGE" ;;
+  *'inspect'*'State.Health'*) printf '%s\n' unhealthy ;;
+  *) exit 91 ;;
+esac
+`,
+    )
+    await writeFile(targetEnvPath, 'FRONTEND_IMAGE=target\n', 'utf8')
+    await writeExecutable(
+      scriptPath,
+      `#!/bin/sh
+set -eu
+RUNTIME_DIR=$TEST_RUNTIME_DIR
+ENV_FILE=$TEST_RUNTIME_DIR/current.env
+COMPOSE_FILE=$TEST_RUNTIME_DIR/compose.yaml
+WAIT_TIMEOUT=1
+TARGET_ENV_FILE=$TEST_TARGET_ENV
+RECORD_TEMP_FILE=''
+CURRENT_ENV_TEMP_FILE=''
+EFFECTIVE_FRONTEND_EDGE_NETWORK=example-edge
+EFFECTIVE_FRONTEND_EDGE_ALIAS=example-frontend
+FRONTEND_ORIGIN=https://frontend.example.test
+EXPECTED_SOURCE=https://github.com/example/react-starter
+EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567
+HOSTED_ROUTING_CHECKER=true
+fail() {
+  printf '%s\\n' "$1" >&2
+  exit 1
+}
+verify_edge_alias() {
+  return 0
+}
+${operationBlock}
+deploy_target_once "$TEST_EXPECTED_IMAGE" "$TEST_TARGET_ENV"
+`,
+    )
+
+    const result = await runCommand(scriptPath, [], {
+      ...process.env,
+      PATH: `${directory}:${process.env.PATH ?? ''}`,
+      TEST_EXPECTED_IMAGE: expectedImage,
+      TEST_RUNTIME_DIR: directory,
+      TEST_TARGET_ENV: targetEnvPath,
+    })
+
+    return {
+      failedRecords: (await readdir(directory)).filter((name) =>
+        name.startsWith('frontend-compose.failed.'),
+      ),
+      result,
+    }
+  } finally {
+    await rm(directory, { force: true, recursive: true })
+  }
+}
+
+async function runSignalRecordContract(): Promise<{
+  readonly failedRecords: readonly string[]
+  readonly result: CommandResult
+}> {
+  const directory = await mkdtemp(join(tmpdir(), 'react-starter-signal-'))
+  try {
+    const runbook = await readFile(
+      'docs/runbooks/frontend-compose-deployment.md',
+      'utf8',
+    )
+    const operationBlock = extractBashBlock(
+      runbook,
+      '## Host-only records and checked deployment step',
+    )
+    const targetEnvPath = join(directory, 'target.env')
+    const scriptPath = join(directory, 'signal-contract.sh')
+
+    await writeFile(targetEnvPath, 'FRONTEND_IMAGE=target\n', 'utf8')
+    await writeExecutable(
+      scriptPath,
+      `#!/bin/sh
+set -eu
+RUNTIME_DIR=$TEST_RUNTIME_DIR
+ENV_FILE=$TEST_RUNTIME_DIR/current.env
+COMPOSE_FILE=$TEST_RUNTIME_DIR/compose.yaml
+WAIT_TIMEOUT=1
+TARGET_ENV_FILE=$TEST_TARGET_ENV
+RECORD_TEMP_FILE=''
+CURRENT_ENV_TEMP_FILE=''
+MUTATION_TARGET_ENV_FILE=$TEST_TARGET_ENV
+fail() {
+  printf '%s\\n' "$1" >&2
+  exit 1
+}
+${operationBlock}
+handle_signal 143
+`,
+    )
+
+    const result = await runCommand(scriptPath, [], {
+      ...process.env,
+      TEST_RUNTIME_DIR: directory,
+      TEST_TARGET_ENV: targetEnvPath,
+    })
+
+    return {
+      failedRecords: (await readdir(directory)).filter((name) =>
+        name.startsWith('frontend-compose.failed.'),
+      ),
       result,
     }
   } finally {
@@ -548,11 +687,12 @@ describe('production deployment contracts', () => {
   })
 
   it('keeps the manual host runbook aligned with the immutable-digest contract', async () => {
-    const [deploymentRunbook, publicationRunbook, ingressRunbook] =
+    const [deploymentRunbook, publicationRunbook, ingressRunbook, readme] =
       await Promise.all([
         readFile('docs/runbooks/frontend-compose-deployment.md', 'utf8'),
         readFile('docs/runbooks/frontend-image-publication.md', 'utf8'),
         readFile('docs/runbooks/frontend-same-origin-ingress.md', 'utf8'),
+        readFile('README.md', 'utf8'),
       ])
 
     expect(deploymentRunbook).toContain(
@@ -580,9 +720,9 @@ describe('production deployment contracts', () => {
       'SHARED_LOCK_ROOT=/path/to/host-shared/frontend-compose-locks',
     )
     expect(deploymentRunbook).toContain('trap cleanup EXIT')
-    expect(deploymentRunbook).toContain("trap 'exit 129' HUP")
-    expect(deploymentRunbook).toContain("trap 'exit 130' INT")
-    expect(deploymentRunbook).toContain("trap 'exit 143' TERM")
+    expect(deploymentRunbook).toContain("trap 'handle_signal 129' HUP")
+    expect(deploymentRunbook).toContain("trap 'handle_signal 130' INT")
+    expect(deploymentRunbook).toContain("trap 'handle_signal 143' TERM")
     expect(deploymentRunbook).toContain(
       'ln "$RECORD_TEMP_FILE" "$destination_file"',
     )
@@ -592,7 +732,11 @@ describe('production deployment contracts', () => {
     expect(deploymentRunbook).toContain('--pull never')
     expect(deploymentRunbook).toContain('--wait-timeout')
     expect(deploymentRunbook).toContain('record_no_clobber')
+    expect(deploymentRunbook).toContain('verify_current_live_state')
+    expect(deploymentRunbook).toContain('ps --all -q frontend')
     expect(deploymentRunbook).toContain('application/problem+json')
+    expect(readme).toContain('GHCR_READ_ONLY_PAT')
+    expect(readme).toContain('--password-stdin')
     expect(publicationRunbook).toContain('frontend-compose-deployment.md')
     expect(ingressRunbook).toContain('frontend-ingress.Caddyfile.example')
 
@@ -619,6 +763,9 @@ describe('production deployment contracts', () => {
     const previousRecordIndex = promotion.indexOf(
       'record_no_clobber "$ENV_FILE" "$PREVIOUS_ENV_RECORD"',
     )
+    const currentLiveStateIndex = promotion.indexOf(
+      'verify_current_live_state "$ENV_FILE"',
+    )
     const installIndex = promotion.indexOf(
       'install_current_env "$TARGET_ENV_FILE"',
     )
@@ -626,6 +773,8 @@ describe('production deployment contracts', () => {
       'deploy_target_once "$RESOLVED_FRONTEND_IMAGE" "$TARGET_ENV_FILE"',
     )
     expect(previousRecordIndex).toBeGreaterThanOrEqual(0)
+    expect(currentLiveStateIndex).toBeGreaterThanOrEqual(0)
+    expect(previousRecordIndex).toBeGreaterThan(currentLiveStateIndex)
     expect(installIndex).toBeGreaterThan(previousRecordIndex)
     expect(deployIndex).toBeGreaterThan(installIndex)
   })
@@ -635,6 +784,20 @@ describe('production deployment contracts', () => {
 
     expect(rollback.result.code).not.toBe(0)
     expect(rollback.failedRecord).toBe('FRONTEND_IMAGE=previous\n')
+  })
+
+  it('records the target when final container health is unhealthy', async () => {
+    const unhealthy = await runUnhealthyDeploymentContract()
+
+    expect(unhealthy.result.code).not.toBe(0)
+    expect(unhealthy.failedRecords).toHaveLength(1)
+  })
+
+  it('records an indeterminate target before a deployment signal exits', async () => {
+    const interrupted = await runSignalRecordContract()
+
+    expect(interrupted.result.code).toBe(143)
+    expect(interrupted.failedRecords).toHaveLength(1)
   })
 
   it('rejects effective Compose topology mismatches before mutation', async () => {

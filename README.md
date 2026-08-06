@@ -150,8 +150,13 @@ Compose нет `ports`, secrets или backend hostname.
 ```bash
 COMPOSE_FILE=/path/to/compose.production.yaml
 ENV_FILE=/path/to/frontend-compose.env
-DOCKER_CONFIG_DIR=/path/to/temporary-docker-config
+DOCKER_CONFIG_DIR="$(mktemp -d)"
 APPROVED_FRONTEND_IMAGE=ghcr.io/<owner>/<repository>@sha256:<64 lowercase hex>
+trap 'rm -rf "$DOCKER_CONFIG_DIR"' EXIT HUP INT TERM
+: "${GHCR_USERNAME:?set GHCR_USERNAME in the host process environment}"
+printf '%s' "${GHCR_READ_ONLY_PAT:?set GHCR_READ_ONLY_PAT in the host process environment}" |
+  docker --config "$DOCKER_CONFIG_DIR" login ghcr.io \
+    --username "$GHCR_USERNAME" --password-stdin >/dev/null
 RESOLVED_FRONTEND_IMAGE="$(scripts/production/verify-compose-image.sh \
   "$COMPOSE_FILE" "$ENV_FILE" "$APPROVED_FRONTEND_IMAGE")"
 docker --config "$DOCKER_CONFIG_DIR" pull "$RESOLVED_FRONTEND_IMAGE"
