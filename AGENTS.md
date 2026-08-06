@@ -32,7 +32,7 @@ capability создавай отдельным vertical slice по той же �
 | Понять состав и runtime flows          | [архитектурный обзор](docs/architecture/overview.md)                                                                                            |
 | Подключить бизнес-модуль               | [business module guide](docs/architecture/business-modules.md)                                                                                  |
 | Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                             |
-| Выполнить отдельную TSDoc-задачу       | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md) и `pnpm lint:tsdoc`                                                                  |
+| Выполнить отдельную TSDoc-задачу       | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md) и `pnpm lint:tsdoc`                                                                   |
 | Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
 | Выполнить deployment или rollback      | [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) и [explicit rollback](docs/runbooks/frontend-dokploy-rollback.md)              |
 
