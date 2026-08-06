@@ -221,7 +221,27 @@ describe('frontend GitHub workflows', () => {
     expect(requireRecord(summary.env, 'summary env').GATE_RESULT).toBe(
       '${{ needs.gate.result }}',
     )
-    expect(source).not.toMatch(/DOKPLOY|VPS|SSH_PRIVATE_KEY/u)
+    expect(requireRecord(summary.env, 'summary env').SOURCE).toBe(
+      '${{ github.server_url }}/${{ github.repository }}',
+    )
+    expect(summary.run).toEqual(
+      expect.stringContaining('echo "- Source: ${SOURCE}"'),
+    )
+    expect(summary.run).toEqual(
+      expect.stringContaining('echo "- Event: ${GITHUB_EVENT_NAME}"'),
+    )
+    expect(summary.run).toEqual(
+      expect.stringContaining('echo "- Ref: ${GITHUB_REF}"'),
+    )
+    expect(summary.run).toEqual(
+      expect.stringContaining('echo "- Workflow ref: ${GITHUB_WORKFLOW_REF}"'),
+    )
+    const smokeIndex = steps.indexOf(smoke)
+    const summaryIndex = steps.indexOf(summary)
+    expect(summaryIndex).toBeGreaterThan(smokeIndex)
+    expect(source).not.toMatch(
+      /GHCR_READ_ONLY_PAT|SSH_PRIVATE_KEY|FRONTEND_EDGE_NETWORK|FRONTEND_EDGE_ALIAS|BACKEND_UPSTREAM/u,
+    )
     expect(source).not.toMatch(/latest|stage-latest/u)
   })
 })

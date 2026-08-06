@@ -26,15 +26,15 @@ capability создавай отдельным vertical slice по той же �
 
 Выбирай документ по задаче до изменения source:
 
-| Задача                                 | Документ                                                                                                                                        |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Создать новый проект из starter        | [bootstrap runbook](docs/getting-started.md)                                                                                                    |
-| Понять состав и runtime flows          | [архитектурный обзор](docs/architecture/overview.md)                                                                                            |
-| Подключить бизнес-модуль               | [business module guide](docs/architecture/business-modules.md)                                                                                  |
-| Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                             |
-| Выполнить отдельную TSDoc-задачу       | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md) и `pnpm lint:tsdoc`                                                                   |
-| Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
-| Выполнить deployment или rollback      | [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) и [explicit rollback](docs/runbooks/frontend-dokploy-rollback.md)              |
+| Задача                                 | Документ                                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Создать новый проект из starter        | [bootstrap runbook](docs/getting-started.md)                                                                                                     |
+| Понять состав и runtime flows          | [архитектурный обзор](docs/architecture/overview.md)                                                                                             |
+| Подключить бизнес-модуль               | [business module guide](docs/architecture/business-modules.md)                                                                                   |
+| Создать или расширить shared UI        | [UI guidelines](docs/architecture/ui-guidelines.md)                                                                                              |
+| Выполнить отдельную TSDoc-задачу       | [TSDoc guidelines](docs/architecture/tsdoc-guidelines.md) и `pnpm lint:tsdoc`                                                                    |
+| Подготовить OCI-публикацию или ingress | [публикация frontend image](docs/runbooks/frontend-image-publication.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md)  |
+| Выполнить deployment или rollback      | [manual Compose deployment](docs/runbooks/frontend-compose-deployment.md) и [same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) |
 
 При создании нового проекта выполни `docs/getting-started.md` по порядку. Не
 восстанавливай bootstrap по памяти или только по краткому README.
@@ -177,23 +177,26 @@ UI ветвится по стабильному `code`, а не по `title` и�
 5. Не выводи secrets, credentials, CSRF token, cookie или raw server payload в
    команды, логи и отчёт.
 
-## Deployment operator
+## Manual host operator
 
-1. Не изменяй VPS, Dokploy Application, domains, Traefik, registry или live
-   environment без явного запроса пользователя.
-2. `deployment:preflight` read-only относительно Dokploy, но всё равно требует
-   live GitHub, GHCR и Dokploy credentials; не запускай его как обычный
-   локальный gate.
-3. Локальные operator tests с fake ports доказывают source contract, но не
-   совместимость API установленного Dokploy instance.
-4. Bootstrap/promotion/rollback запускаются только с `--apply`; rollback всегда
-   явный и никогда не выполняется автоматически после ошибки.
-5. Apply получает атомарный GitHub ref lease, повторно читает Application и
-   deployments под ним и останавливается при drift или active deployment.
-   Promotion до mutation также проверяет OCI identity `expectedCurrent`.
-6. Не заявляй deployment PASS без exact digest, deployment ID со статусом
-   `done`, совпавшего `/_frontend/identity`, backend
-   `application/problem+json` probe и сохранённого redacted evidence.
+1. Не изменяй host Docker, external edge network, Caddy, TLS, backend, DNS,
+   registry или live environment без явного запроса пользователя.
+2. `compose.production.yaml` владеет только одним `frontend` service: image,
+   healthcheck, restart, bounded logs и подключение к pre-existing external
+   edge network. Ports, secrets, backend hostname и browser runtime environment
+   в нём запрещены.
+3. Manual Compose runbook использует только exact digest из успешного push run
+   integration branch; SHA/run tags — locators, а не deployment references.
+4. Bootstrap, promotion и rollback являются явными host actions. Перед
+   promotion сохраняется current known-good digest как previous; при failed,
+   timeout или unknown state следующая mutation не запускается автоматически.
+5. Local contract tests, `docker compose config --quiet` и `pnpm oci:check`
+   доказывают только source/image/local state, а не hosted VPS/TLS/browser
+   readiness.
+6. Не заявляй hosted deployment PASS без exact effective Compose image, OCI
+   source/revision/workflow comparison, healthy Compose container, совпавших
+   `/_frontend/identity` и `/_frontend/health`, backend
+   `application/problem+json` probe и hosted collision/SPA checks.
 
 ## Проверка результата
 
@@ -218,11 +221,11 @@ remote CI, GHCR publication или deployment.
 3. browser/runtime с реальным backend;
 4. remote CI;
 5. publication/merge;
-6. deployment с ID и hosted smoke.
+6. manual host deployment с exact effective Compose image и hosted smoke.
 
 Локальный commit, `pnpm check` или `pnpm oci:check` не доказывает remote CI,
 публикацию или deployment. Доверенный внутренний pull request может
-опубликовать pre-merge verification image, но deployment operator принимает
+опубликовать pre-merge verification image, но manual host procedure принимает
 только успешный push run фактической integration branch. Push после merge
 повторяет image pipeline и может создать проверенный candidate, но сам по себе
 не выполняет deployment. В отчёте явно указывай, какие уровни действительно

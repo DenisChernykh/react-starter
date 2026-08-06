@@ -167,16 +167,16 @@ git remote -v
 
 ### Обязательные места
 
-| Файл                                     | Что изменить                                    |
-| ---------------------------------------- | ----------------------------------------------- |
-| `package.json`                           | `name` на npm-safe slug нового проекта          |
-| `index.html`                             | пользовательский `<title>`                      |
-| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                         |
-| `README.md`                              | название, назначение и product-specific запуск  |
-| `.env.local`                             | необязательный Vite dev proxy target            |
-| `.github/workflows/stage-image.yml`      | PR и push branch для image pipeline             |
-| release manifest examples                | GHCR repository, public origin и smoke paths    |
-| будущий Dokploy Application              | отдельный application ID для этой frontend copy |
+| Файл                                     | Что изменить                                   |
+| ---------------------------------------- | ---------------------------------------------- |
+| `package.json`                           | `name` на npm-safe slug нового проекта         |
+| `index.html`                             | пользовательский `<title>`                     |
+| `src/widgets/app-shell/ui/app-shell.tsx` | product label в sidebar                        |
+| `README.md`                              | название, назначение и product-specific запуск |
+| `.env.local`                             | необязательный Vite dev proxy target           |
+| `.github/workflows/stage-image.yml`      | PR и push branch для image pipeline            |
+| host-only `frontend-compose.env`         | Compose project, exact digest, network и alias |
+| host-owned Caddy copy                    | domain, backend upstream и frontend alias      |
 
 Starter инициализируется с branch `main`, а единый image workflow слушает
 `stage`. Выберите один процесс осознанно и измените оба trigger этого workflow
@@ -226,28 +226,29 @@ session tokens или приватные credentials в локальный env.
 
 ### Publication и deployment coordinates
 
-Персонализируйте `integrationBranch`, `repository`, `publicBaseUrl` и product
-smoke paths в локальных копиях symbolic examples. `integrationBranch` должен
-совпадать с push branch в `.github/workflows/stage-image.yml`:
+Персонализируйте integration branch в `pull_request` и `push` triggers
+`.github/workflows/stage-image.yml`. GHCR repository и успешный push candidate
+определяются workflow; exact digest, source, revision и workflow attempt
+фиксируются вне repository для ручного host operator.
 
-- `docs/runbooks/frontend-release-manifest.bootstrap.example.json`;
-- `docs/runbooks/frontend-release-manifest.promotion.example.json`.
+Скопируйте tracked `compose.production.yaml` без редактирования в host-owned
+runtime directory и создайте там `frontend-compose.env`. В этом env-файле
+задайте `COMPOSE_PROJECT_NAME`, `FRONTEND_EDGE_NETWORK` существующей external
+network и уникальный `FRONTEND_EDGE_ALIAS` для каждой frontend copy.
+`FRONTEND_IMAGE` хранит только exact `ghcr.io/...@sha256:<64 lowercase hex>`.
+Текущий и предыдущий digest сохраняются в host-only env-файлах; credentials и
+live coordinates в Git не коммитятся.
 
-Не коммитьте manifest с live release coordinates. Рабочие inputs и evidence
-храните под игнорируемой `.deployment/`; evidence writer создаёт каталог
-`.deployment/evidence` автоматически.
+Скопируйте `config/caddy/frontend-ingress.Caddyfile.example` в host-owned Caddy
+config и задайте там `FRONTEND_DOMAIN`, `BACKEND_UPSTREAM` и тот же unique
+alias. Caddy/TLS/backend/DNS и restart recovery остаются за пределами source
+bootstrap. Полный порядок находится в
+[manual Compose deployment](runbooks/frontend-compose-deployment.md),
+[publication](runbooks/frontend-image-publication.md) и
+[same-origin ingress](runbooks/frontend-same-origin-ingress.md) runbooks.
 
-Для public frontend и admin создаются разные GitHub repositories/GHCR packages
-и разные Dokploy Applications. Сохраните application ID только в operator
-environment `DOKPLOY_APPLICATION_ID`; не встраивайте его в image или release
-manifest. Registry connection, domains и same-origin routing настраиваются
-отдельно по [publication](runbooks/frontend-image-publication.md),
-[ingress](runbooks/frontend-same-origin-ingress.md) и
-[Dokploy operator](runbooks/frontend-dokploy-deployment.md) runbooks.
-
-Dokploy не требуется для установки dependencies, локального Vite запуска,
-OpenAPI generation, browser development или `pnpm check`. Его подготовка и
-любые live mutations начинаются только после отдельного явного разрешения.
+`docs/superpowers/**` содержит исторические design/implementation records и не
+является активным deployment contract.
 
 ## 6. Установить зависимости
 
@@ -502,14 +503,14 @@ Push выполняется только после добавления про�
 
 ### Publication
 
-Remote, push, pull request, merge и deployment не входят в bootstrap по
+Remote, push, pull request, merge и host deployment не входят в bootstrap по
 умолчанию. После персонализации доверенный внутренний pull request публикует
 pre-merge verification image, а push в integration branch — deployable
 candidate для фактического SHA. Fork и Dependabot publication пропускается.
 Для GHCR нужны package linkage с repository и permissions `contents: read` и
 `packages: write`; public frontend и admin публикуют отдельные images.
 Подробности — в [runbook публикации](runbooks/frontend-image-publication.md).
-Ручной promotion и rollback после публикации описаны в
-[Dokploy deployment runbook](runbooks/frontend-dokploy-deployment.md) и
-[rollback runbook](runbooks/frontend-dokploy-rollback.md); они не входят в
-bootstrap нового продукта.
+Ручной Compose bootstrap, promotion, rollback и restart recovery после
+публикации описаны в [manual deployment runbook](runbooks/frontend-compose-deployment.md);
+они не входят в bootstrap нового продукта. Hosted VPS/TLS/browser evidence
+нужно получать отдельно и не подменять локальными gates.

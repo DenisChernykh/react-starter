@@ -67,13 +67,13 @@ Frontend доступен на `http://localhost:5173`. Для browser-auth back
 - [TSDoc](docs/architecture/tsdoc-guidelines.md) — отдельная необязательная
   задача документирования handwritten exports.
 - [Same-origin ingress](docs/runbooks/frontend-same-origin-ingress.md) —
-  подготовка маршрутизации public/admin/API hosts.
+  host-owned Caddy path routing для same-origin API.
 - [Публикация frontend image](docs/runbooks/frontend-image-publication.md) —
   candidate image, GHCR digest и границы evidence.
-- [Dokploy operator](docs/runbooks/frontend-dokploy-deployment.md) — ручные
-  preflight, bootstrap и promotion exact digest.
-- [Explicit rollback](docs/runbooks/frontend-dokploy-rollback.md) — откат из
-  failed/indeterminate promotion evidence.
+- [Manual Compose deployment](docs/runbooks/frontend-compose-deployment.md) —
+  host bootstrap, exact digest promotion, probes и explicit rollback.
+- [Historical records](docs/superpowers/) — design/implementation records, не
+  активный deployment contract.
 
 ## Контракт API
 
@@ -127,9 +127,9 @@ pnpm oci:check
 ## Публикация образа
 
 При копировании starter выберите integration branch и одинаково
-персонализируйте `pull_request` в `.github/workflows/ci.yml` и `push` в
-`.github/workflows/stage-image.yml`. Push в неё (как правило, merge PR)
-запускает workflow candidate image, но не deployment.
+персонализируйте `pull_request` и `push` в `.github/workflows/stage-image.yml`.
+Push в неё (как правило, merge PR) запускает workflow candidate image, но не
+deployment.
 
 Workflow публикует image в `ghcr.io/<owner>/<repository>`; у workflow должны
 быть `contents: read` и `packages: write`, а пакет GHCR — linkage и доступ к
@@ -140,22 +140,30 @@ Workflow публикует image в `ghcr.io/<owner>/<repository>`; у workflow
 
 ## Ручной deployment
 
-После отдельной подготовки Dokploy Application доступны четыре локальные
-operator-команды:
+Host operator получает exact digest только из успешного push run, проверяет
+OCI labels pulled image и применяет один tracked Compose service. External edge
+network, Caddy/TLS, backend и host runtime directory остаются host-owned; в
+Compose нет `ports`, secrets или backend hostname.
+
+Минимальная последовательность в выбранном host runtime directory:
 
 ```bash
-pnpm deployment:preflight -- --manifest /absolute/path/release.json
-pnpm deployment:bootstrap -- --manifest /absolute/path/release.json --apply
-pnpm deployment:promote -- --manifest /absolute/path/release.json --apply
-pnpm deployment:rollback -- --evidence /absolute/path/failed-evidence.json --apply
+COMPOSE_FILE=/path/to/compose.production.yaml
+ENV_FILE=/path/to/frontend-compose.env
+DOCKER_CONFIG_DIR=/path/to/temporary-docker-config
+APPROVED_FRONTEND_IMAGE=ghcr.io/<owner>/<repository>@sha256:<64 lowercase hex>
+RESOLVED_FRONTEND_IMAGE="$(scripts/production/verify-compose-image.sh \
+  "$COMPOSE_FILE" "$ENV_FILE" "$APPROVED_FRONTEND_IMAGE")"
+docker --config "$DOCKER_CONFIG_DIR" pull "$RESOLVED_FRONTEND_IMAGE"
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
+  up --detach --wait --wait-timeout 180 --pull never frontend
 ```
 
-Preflight читает live GitHub/GHCR/Dokploy state, но не меняет Application.
-Остальные команды требуют явный `--apply`, пишут локальный `0600` evidence и
-не настраивают VPS, domains, Traefik, environment или registry credentials.
-Порядок и границы описаны в
-[deployment runbook](docs/runbooks/frontend-dokploy-deployment.md) и
-[rollback runbook](docs/runbooks/frontend-dokploy-rollback.md).
+Promotion сохраняет current known-good digest как host-only previous record до
+изменения `FRONTEND_IMAGE`. Failed, timeout или unknown state останавливает
+оператора; rollback и return-to-current запускаются только явно. Полный
+порядок находится в [manual Compose deployment runbook](docs/runbooks/frontend-compose-deployment.md),
+а Caddy path contract — в [same-origin ingress runbook](docs/runbooks/frontend-same-origin-ingress.md).
 
 ## Аутентификация
 
