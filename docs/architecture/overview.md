@@ -26,8 +26,7 @@
 - [TSDoc](tsdoc-guidelines.md);
 - [same-origin ingress](../runbooks/frontend-same-origin-ingress.md);
 - [публикация frontend image](../runbooks/frontend-image-publication.md);
-- [Dokploy deployment operator](../runbooks/frontend-dokploy-deployment.md);
-- [explicit rollback](../runbooks/frontend-dokploy-rollback.md).
+- [manual Compose deployment](../runbooks/frontend-compose-deployment.md).
 
 ## Технологический контракт
 
@@ -328,43 +327,39 @@ non-HTML `404`. Полная host/path table и probes описаны в
 
 Frontend OCI image владеет собранными static assets, Nginx на non-root `8080`
 и внутренним `/_frontend/health`. Он не владеет hostname, TLS, HSTS, backend
-credentials, API routing, GHCR access или Dokploy/VPS configuration. Эти
-границы принадлежат ingress и operator/deployment этапу; hostname не baked into
-image.
+credentials, API routing, GHCR access или host configuration. Эти границы
+принадлежат Caddy/host и manual Compose deployment этапу; hostname не baked
+into image.
 
-### Единицы deployment operator
+### Единицы manual deployment
 
-Operator разделён на узкие проверяемые единицы:
+Manual deployment разделён на узкие проверяемые единицы:
 
-- strict manifest с exact integration branch и live-environment parsers;
-- GitHub workflow attempt verifier;
-- exact GHCR image и OCI-label verifier;
-- Dokploy Application/Deployment adapter;
+- successful push run integration branch и его candidate summary;
+- exact GHCR image pull и OCI-label comparison;
+- secret-free host Compose env с current/previous digest record;
+- one frontend service на pre-existing external edge network;
 - hosted frontend/same-origin smoke;
-- orchestration bootstrap, promotion и explicit rollback;
-- атомарный redacted evidence writer и process CLI.
+- explicit bootstrap, promotion, rollback и restart recovery.
 
 Нормальный happy path:
 
 ```text
-release manifest
-→ read-only preflight
-→ exact successful workflow attempt
+successful push workflow attempt
 → exact GHCR digest и OCI labels
-→ fresh Dokploy state
-→ explicit update + deploy
-→ lock нового deployment ID и poll
+→ host-only Compose inputs
+→ docker compose config → authenticated exact pull → up --pull never --wait
 → hosted health/UI/API smoke
-→ local 0600 evidence
+→ current/previous digest record
 ```
 
-Apply повторяет preflight, потому что read-only результат не блокирует внешний
-state. Rollback читает failed/indeterminate promotion evidence и до mutation
-требует, чтобы configured image всё ещё совпадал с failed target. Operator не
-создаёт Application, не меняет Traefik/domains/environment/registry и никогда
-не запускает автоматический rollback. Подробные процедуры находятся в
-[deployment](../runbooks/frontend-dokploy-deployment.md) и
-[rollback](../runbooks/frontend-dokploy-rollback.md) runbooks.
+Перед promotion человек сохраняет current known-good digest как previous.
+Failed, timeout или unknown state останавливает процедуру: следующий `pull`,
+`up` или rollback запускается только после ручной проверки. Compose не создаёт
+host network, не меняет Caddy/TLS/backend/DNS и не запускает автоматический
+rollback. Подробные процедуры находятся в
+[manual Compose deployment](../runbooks/frontend-compose-deployment.md) и
+[same-origin ingress](../runbooks/frontend-same-origin-ingress.md) runbooks.
 
 ## Контракт ошибок
 
@@ -553,12 +548,12 @@ Evidence flows отличаются:
 ```text
 source → trusted pull request → gate → build → GHCR digest → Trivy → pull → smoke → pre-merge verification
 merge/push в integration branch → повторный pipeline → deployable stage candidate
-candidate digest → manifest → preflight → exact image → Dokploy → smoke → evidence
+candidate digest → manual OCI verification → Compose → hosted probes → evidence
 ```
 
-SHA/run tag — locator workflow, не release identity: operator использует exact
+SHA/run tag — locator workflow, не release identity: host operator использует exact
 digest только после успешных scan и smoke. PR run проверяет image до merge, но
-operator принимает только успешный push run фактической integration branch.
+host operator принимает только успешный push run фактической integration branch.
 Merge/push может создать candidate, но не выполняет deployment. Локальный
 commit, `pnpm check` или `pnpm oci:check` не является remote CI, GHCR
 publication или deployment evidence.

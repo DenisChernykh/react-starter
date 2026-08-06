@@ -1,0 +1,27 @@
+name: '${COMPOSE_PROJECT_NAME:?Set COMPOSE_PROJECT_NAME to a unique project name per frontend copy}'
+
+services:
+  frontend:
+    # Use only an approved digest: ghcr.io/<owner>/<repository>@sha256:<64 lowercase hex>
+    image: '${FRONTEND_IMAGE:?Set FRONTEND_IMAGE to an exact ghcr.io digest}'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/_frontend/health']
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    networks:
+      edge:
+        aliases:
+          - '${FRONTEND_EDGE_ALIAS:?Set FRONTEND_EDGE_ALIAS to a unique edge-network alias}'
+
+networks:
+  edge:
+    name: '${FRONTEND_EDGE_NETWORK:?Set FRONTEND_EDGE_NETWORK to an existing edge network}'
+    external: true

@@ -106,6 +106,7 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
           GATE_RESULT: ${{ needs.gate.result }}
           IMAGE_NAME: ${{ steps.metadata.outputs.image_name }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
           WORKFLOW_RUN_URL: ${{ steps.metadata.outputs.workflow_run_url }}
         run: |
           {
@@ -115,6 +116,10 @@ jobs:
             echo "- Digest: \`${IMAGE_NAME}@${DIGEST}\`"
             echo "- Revision: \`${GITHUB_SHA}\`"
             echo "- Attempt: ${WORKFLOW_RUN_URL}"
+            echo "- Source: ${SOURCE}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Ref: ${GITHUB_REF}"
+            echo "- Workflow ref: ${GITHUB_WORKFLOW_REF}"
             echo "- Gate result: \`${GATE_RESULT}\`"
             echo "- Scan: \`HIGH,CRITICAL\` with unfixed vulnerabilities ignored"
             echo "- Smoke: \`pnpm oci:check\` ran against the published digest"
