@@ -157,6 +157,25 @@ describe('LoginForm', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('offers email verification when the backend requires it', async () => {
+    server.use(
+      http.post(`${apiOrigin}/v1/auth/login`, () =>
+        problem(403, 'EMAIL_VERIFICATION_REQUIRED'),
+      ),
+    )
+    renderLogin()
+    const user = await fillValidCredentials()
+
+    await user.click(screen.getByRole('button', { name: 'Войти' }))
+
+    expect(
+      await screen.findByText('Email не подтверждён. Запросите новое письмо'),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('link', { name: 'Запросить новое письмо' }),
+    ).toHaveAttribute('href', '/auth/resend-email-verification')
+  })
+
   it('navigates after session creation when the following profile request is unavailable', async () => {
     let meRequests = 0
     server.use(

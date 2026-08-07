@@ -5,3 +5,12 @@ export {
   createApprovalRequestPath,
   openApprovalRequestPath,
 } from './approval-requests'
+export {
+  forgotPasswordPath,
+  loginPath,
+  loginPathWithReturnTo,
+  registerPath,
+  resendEmailVerificationPath,
+  resetPasswordPath,
+  verifyEmailPath,
+} from './auth'

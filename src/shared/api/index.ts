@@ -18,10 +18,15 @@ export {
   setCsrfToken,
 } from './client/csrf-token'
 export {
+  authConfirmEmailVerification,
+  authConfirmPasswordReset,
   authGetCsrfToken,
   authGetMe,
   authLogin,
   authLogout,
+  authRegister,
+  authRequestPasswordReset,
+  authResendEmailVerification,
   getAuthGetMeQueryKey,
   getAuthGetMeQueryOptions,
 } from './generated/auth/auth'
@@ -37,6 +42,8 @@ export type {
   ApprovalRequestResponseDtoStatus,
   ApprovalRequestsDecidePathParameters,
   ApprovalRequestsGetPathParameters,
+  ConfirmEmailVerificationRequestDto,
+  ConfirmPasswordResetRequestDto,
   CreateApprovalRequestDto,
   CurrentUserResponseDto,
   DecideApprovalRequestDto,
@@ -44,9 +51,18 @@ export type {
   LoginRequestDto,
   LoginResponseDto,
   ProblemResponseDto,
+  RegisterUserRequestDto,
+  SelfServiceEmailRequestDto,
   ValidationProblemResponseDto,
 } from './generated/model'
-export { AuthLoginBody as authLoginSchema } from './generated-zod/auth/auth.zod'
+export {
+  AuthConfirmEmailVerificationBody as authConfirmEmailVerificationSchema,
+  AuthConfirmPasswordResetBody as authConfirmPasswordResetSchema,
+  AuthLoginBody as authLoginSchema,
+  AuthRegisterBody as authRegisterSchema,
+  AuthRequestPasswordResetBody as authRequestPasswordResetSchema,
+  AuthResendEmailVerificationBody as authResendEmailVerificationSchema,
+} from './generated-zod/auth/auth.zod'
 export {
   ApprovalRequestsCreateBody as approvalRequestCreateSchema,
   ApprovalRequestsDecideBody as approvalRequestDecisionSchema,

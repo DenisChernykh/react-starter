@@ -8,6 +8,15 @@ const requiredOperations = [
   ['/v1/auth/me', 'get', 'authGetMe'],
   ['/v1/auth/csrf', 'get', 'authGetCsrfToken'],
   ['/v1/auth/logout', 'post', 'authLogout'],
+  ['/v1/auth/register', 'post', 'authRegister'],
+  ['/v1/auth/email-verification/resend', 'post', 'authResendEmailVerification'],
+  [
+    '/v1/auth/email-verification/confirm',
+    'post',
+    'authConfirmEmailVerification',
+  ],
+  ['/v1/auth/password-reset/request', 'post', 'authRequestPasswordReset'],
+  ['/v1/auth/password-reset/confirm', 'post', 'authConfirmPasswordReset'],
   ['/v1/approval-requests', 'post', 'approvalRequestsCreate'],
   ['/v1/approval-requests/{requestId}', 'get', 'approvalRequestsGet'],
   [

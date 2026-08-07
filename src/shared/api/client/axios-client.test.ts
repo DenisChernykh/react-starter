@@ -14,6 +14,62 @@ const apiOrigin = window.location.origin
 describe('credentialed Axios transport', () => {
   beforeEach(clearCsrfToken)
 
+  it('exempts every public self-service mutation from CSRF fetching', async () => {
+    const publicMutationPaths = [
+      '/v1/auth/login',
+      '/v1/auth/register',
+      '/v1/auth/email-verification/resend',
+      '/v1/auth/email-verification/confirm',
+      '/v1/auth/password-reset/request',
+      '/v1/auth/password-reset/confirm',
+    ] as const
+    let csrfRequests = 0
+    const csrfHeaders: Array<string | null> = []
+
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/csrf`, () => {
+        csrfRequests += 1
+        return HttpResponse.json({ csrfToken: 'csrf-from-endpoint' })
+      }),
+      ...publicMutationPaths.map((path) =>
+        http.post(`${apiOrigin}${path}`, ({ request }) => {
+          csrfHeaders.push(request.headers.get('X-CSRF-Token'))
+          return new HttpResponse(null, { status: 204 })
+        }),
+      ),
+    )
+
+    await Promise.all(
+      publicMutationPaths.map((url) =>
+        apiMutator<void>({ url, method: 'POST' }),
+      ),
+    )
+
+    expect(csrfRequests).toBe(0)
+    expect(csrfHeaders).toEqual(publicMutationPaths.map(() => null))
+  })
+
+  it('requires CSRF for a non-POST request on a public mutation path', async () => {
+    let csrfRequests = 0
+    let csrfHeader: string | null = null
+
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/csrf`, () => {
+        csrfRequests += 1
+        return HttpResponse.json({ csrfToken: 'csrf-from-endpoint' })
+      }),
+      http.patch(`${apiOrigin}/v1/auth/register`, ({ request }) => {
+        csrfHeader = request.headers.get('X-CSRF-Token')
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await apiMutator<void>({ url: '/v1/auth/register', method: 'PATCH' })
+
+    expect(csrfRequests).toBe(1)
+    expect(csrfHeader).toBe('csrf-from-endpoint')
+  })
+
   it('sends credentials and exempts login from CSRF fetching', async () => {
     let csrfRequests = 0
     let credentials: RequestCredentials | undefined

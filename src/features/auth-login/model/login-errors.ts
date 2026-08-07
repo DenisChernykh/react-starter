@@ -54,6 +54,12 @@ export function getLoginFormError(error: unknown) {
   }
   if (
     error instanceof ApiProblemError &&
+    error.code === 'EMAIL_VERIFICATION_REQUIRED'
+  ) {
+    return 'Email не подтверждён. Запросите новое письмо'
+  }
+  if (
+    error instanceof ApiProblemError &&
     error.code === 'RATE_LIMIT_EXCEEDED'
   ) {
     return 'Слишком много запросов. Повторите попытку позже.'

@@ -110,6 +110,19 @@ createBrowserRouter
 │   ├── createRedirectAuthenticatedLoader
 │   ├── LoginPage
 │   └── RouteError
+├── /register
+│   ├── createRedirectAuthenticatedLoader
+│   └── RegisterPage
+├── /auth/resend-email-verification
+│   ├── createRedirectAuthenticatedLoader
+│   └── ResendEmailVerificationPage
+├── /forgot-password
+│   ├── createRedirectAuthenticatedLoader
+│   └── ForgotPasswordPage
+├── /auth/verify-email
+│   └── VerifyEmailPage (public token route)
+├── /auth/reset-password
+    └── ResetPasswordPage (public token route)
 └── /
     ├── createRequireSessionLoader
     ├── ProtectedLayout
@@ -183,6 +196,14 @@ redirect flow.
 6. Не переносите entity query, mutation или feature presentation в router.
 7. Покройте direct deep link, anonymous redirect, `returnTo`, порядок session и
    business requests, route matching и error boundary.
+
+Self-service auth form routes (`register`, resend и forgot-password) используют
+тот же redirect-authenticated loader, что и login. Token routes намеренно не
+делают session request: действующий cookie не должен блокировать подтверждение
+email или reset. Ссылки backend передают token только во fragment (`#token=...`).
+`useConsumedFragmentParameter` захватывает его один раз в памяти, затем layout
+effect выполняет replace-навигацию без fragment; token не попадает в query,
+history, storage, RHF или сообщения.
 
 ## OpenAPI и генерация Orval
 
@@ -286,7 +307,10 @@ proxy-рует `/v1` и `/health`; эта настройка не попадае
 - всегда отправляет cookie credentials;
 - добавляет `Content-Type: application/json` для unsafe requests;
 - превращает отсутствующее unsafe body в `{}`;
-- не добавляет CSRF к login;
+- не добавляет CSRF к login и пяти public self-service POST:
+  `/v1/auth/register`, `/v1/auth/email-verification/resend`,
+  `/v1/auth/email-verification/confirm`, `/v1/auth/password-reset/request` и
+  `/v1/auth/password-reset/confirm`;
 - для остальных `POST`, `PUT`, `PATCH`, `DELETE` получает
   `X-CSRF-Token`.
 
@@ -305,6 +329,12 @@ CSRF token хранится только в памяти модуля:
 Credentialed browser auth требует точного frontend origin в backend CORS.
 Совпадение host, scheme и port обязательно; backend валидирует фактический
 browser `Origin`, а не доверяет только адресу proxy target.
+
+Self-service lifecycle является backend opt-in: при
+`AUTH_SELF_SERVICE_MODE=disabled` backend остаётся источником истины и frontend
+показывает безопасный ответ недоступности. Frontend не добавляет runtime- или
+build-time feature flag; включение выполняется только конфигурацией backend и
+его CORS/public app origin.
 
 ### Same-origin production happy path
 

@@ -12,6 +12,19 @@ const requiredPaths = {
   '/v1/auth/me': { get: { operationId: 'authGetMe' } },
   '/v1/auth/csrf': { get: { operationId: 'authGetCsrfToken' } },
   '/v1/auth/logout': { post: { operationId: 'authLogout' } },
+  '/v1/auth/register': { post: { operationId: 'authRegister' } },
+  '/v1/auth/email-verification/resend': {
+    post: { operationId: 'authResendEmailVerification' },
+  },
+  '/v1/auth/email-verification/confirm': {
+    post: { operationId: 'authConfirmEmailVerification' },
+  },
+  '/v1/auth/password-reset/request': {
+    post: { operationId: 'authRequestPasswordReset' },
+  },
+  '/v1/auth/password-reset/confirm': {
+    post: { operationId: 'authConfirmPasswordReset' },
+  },
   '/v1/approval-requests': {
     post: { operationId: 'approvalRequestsCreate' },
   },
@@ -44,6 +57,39 @@ const requiredApprovalOperations = [
   },
 ]
 
+const requiredSelfServiceOperations = [
+  {
+    label: 'register',
+    path: '/v1/auth/register',
+    method: 'post',
+    operationId: 'authRegister',
+  },
+  {
+    label: 'resend email verification',
+    path: '/v1/auth/email-verification/resend',
+    method: 'post',
+    operationId: 'authResendEmailVerification',
+  },
+  {
+    label: 'confirm email verification',
+    path: '/v1/auth/email-verification/confirm',
+    method: 'post',
+    operationId: 'authConfirmEmailVerification',
+  },
+  {
+    label: 'request password reset',
+    path: '/v1/auth/password-reset/request',
+    method: 'post',
+    operationId: 'authRequestPasswordReset',
+  },
+  {
+    label: 'confirm password reset',
+    path: '/v1/auth/password-reset/confirm',
+    method: 'post',
+    operationId: 'authConfirmPasswordReset',
+  },
+]
+
 describe('OpenAPI synchronization', () => {
   it.each([undefined, '', {}, { openapi: '2.0', paths: requiredPaths }])(
     'rejects an invalid document',
@@ -66,6 +112,30 @@ describe('OpenAPI synchronization', () => {
     ({ path, method }) => {
       const paths = structuredClone(requiredPaths)
       delete paths[path][method]
+
+      expect(() =>
+        validateOpenApiDocument({ openapi: '3.0.3', paths }),
+      ).toThrow(path)
+    },
+  )
+
+  it.each(requiredSelfServiceOperations)(
+    'rejects a document missing the self-service $label operation',
+    ({ path, method }) => {
+      const paths = structuredClone(requiredPaths)
+      delete paths[path][method]
+
+      expect(() =>
+        validateOpenApiDocument({ openapi: '3.0.3', paths }),
+      ).toThrow(path)
+    },
+  )
+
+  it.each(requiredSelfServiceOperations)(
+    'rejects a wrong operationId for the self-service $label operation',
+    ({ path, method, operationId }) => {
+      const paths = structuredClone(requiredPaths)
+      paths[path][method].operationId = `${operationId}Wrong`
 
       expect(() =>
         validateOpenApiDocument({ openapi: '3.0.3', paths }),

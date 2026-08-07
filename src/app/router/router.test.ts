@@ -108,6 +108,66 @@ afterEach(() => {
 })
 
 describe('application router session guard', () => {
+  it('allows token confirmation without a session request', async () => {
+    let sessionRequests = 0
+    let confirmRequests = 0
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, () => {
+        sessionRequests += 1
+        return HttpResponse.json(currentUser)
+      }),
+      http.post(
+        `${apiOrigin}/v1/auth/email-verification/confirm`,
+        async ({ request }) => {
+          confirmRequests += 1
+          expect(await request.json()).toEqual({ token: 'A'.repeat(43) })
+          return new HttpResponse(null, { status: 204 })
+        },
+      ),
+    )
+    const { queryClient, router } = await createApplicationRouter(
+      `/auth/verify-email#token=${'A'.repeat(43)}`,
+    )
+    renderApplicationRouter(router, queryClient)
+
+    expect(await screen.findByText('Email подтверждён')).toBeVisible()
+    expect(sessionRequests).toBe(0)
+    expect(confirmRequests).toBe(1)
+    expect(router.state.location.hash).toBe('')
+  })
+
+  it('opens the reset token route without a session request', async () => {
+    let sessionRequests = 0
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, () => {
+        sessionRequests += 1
+        return HttpResponse.json(currentUser)
+      }),
+    )
+    const { queryClient, router } = await createApplicationRouter(
+      `/auth/reset-password#token=${'B'.repeat(43)}`,
+    )
+    renderApplicationRouter(router, queryClient)
+
+    expect(await screen.findByLabelText('Новый пароль')).toBeVisible()
+    expect(sessionRequests).toBe(0)
+    expect(router.state.location.hash).toBe('')
+  })
+
+  it.each(['/register', '/auth/resend-email-verification', '/forgot-password'])(
+    'redirects an authenticated user away from the form route %s',
+    async (path) => {
+      server.use(
+        http.get(`${apiOrigin}/v1/auth/me`, () =>
+          HttpResponse.json(currentUser),
+        ),
+      )
+      const { router } = await createApplicationRouter(path)
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    },
+  )
+
   it('redirects an anonymous approval deep link with its exact returnTo and no detail GET', async () => {
     let detailsRequests = 0
     server.use(

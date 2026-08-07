@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 
 import {
   ApiProblemError,
@@ -13,6 +14,11 @@ import {
   PasswordField,
   TextField,
 } from '@/shared/ui'
+import {
+  forgotPasswordPath,
+  registerPath,
+  resendEmailVerificationPath,
+} from '@/shared/routes'
 
 import {
   getLoginFormError,
@@ -34,6 +40,7 @@ type LoginFormProps = {
 export function LoginForm({ returnTo }: LoginFormProps) {
   const login = useLogin(returnTo)
   const [formError, setFormError] = useState<string | null>(null)
+  const [verificationRequired, setVerificationRequired] = useState(false)
   const {
     formState: { errors },
     handleSubmit,
@@ -45,6 +52,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
 
   const submit = handleSubmit(async (credentials) => {
     setFormError(null)
+    setVerificationRequired(false)
     try {
       await login.mutateAsync(credentials)
     } catch (error) {
@@ -60,6 +68,12 @@ export function LoginForm({ returnTo }: LoginFormProps) {
           })
         }
         if (Object.keys(fieldErrors).length > 0) return
+      }
+      if (
+        error instanceof ApiProblemError &&
+        error.code === 'EMAIL_VERIFICATION_REQUIRED'
+      ) {
+        setVerificationRequired(true)
       }
       setFormError(getLoginFormError(error))
     }
@@ -88,6 +102,15 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         </Alert>
       )}
 
+      {verificationRequired && (
+        <Link
+          className="block text-sm text-primary underline-offset-4 hover:underline"
+          to={resendEmailVerificationPath}
+        >
+          Запросить новое письмо
+        </Link>
+      )}
+
       <Button
         type="submit"
         className="w-full"
@@ -96,6 +119,21 @@ export function LoginForm({ returnTo }: LoginFormProps) {
       >
         Войти
       </Button>
+      <p className="text-center text-sm text-muted-foreground">
+        <Link
+          className="text-primary underline-offset-4 hover:underline"
+          to={registerPath}
+        >
+          Создать аккаунт
+        </Link>
+        {' · '}
+        <Link
+          className="text-primary underline-offset-4 hover:underline"
+          to={forgotPasswordPath}
+        >
+          Забыли пароль?
+        </Link>
+      </p>
     </form>
   )
 }

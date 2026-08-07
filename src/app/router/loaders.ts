@@ -2,6 +2,7 @@ import type { LoaderFunction } from 'react-router'
 import { redirect } from 'react-router'
 
 import { isProblemCode } from '@/shared/api'
+import { loginPathWithReturnTo } from '@/shared/routes'
 
 type SessionLoaderDependencies = {
   load: (signal: AbortSignal) => Promise<unknown>
@@ -29,7 +30,7 @@ export function createRequireSessionLoader({
       clear()
       const url = new URL(request.url)
       const returnTo = `${url.pathname}${url.search}${url.hash}`
-      throw redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`)
+      throw redirect(loginPathWithReturnTo(returnTo))
     }
   }
 }
