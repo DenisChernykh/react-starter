@@ -8,6 +8,367 @@
 import * as zod from 'zod'
 
 /**
+ * @summary Accept an account invitation without creating a session
+ */
+export const authAcceptAccountInvitationBodyPasswordMin = 12
+export const authAcceptAccountInvitationBodyPasswordMax = 1024
+
+export const authAcceptAccountInvitationBodyTokenMin = 43
+export const authAcceptAccountInvitationBodyTokenMax = 43
+
+export const AuthAcceptAccountInvitationBody = zod.strictObject({
+  password: zod
+    .string()
+    .min(authAcceptAccountInvitationBodyPasswordMin)
+    .max(authAcceptAccountInvitationBodyPasswordMax),
+  token: zod
+    .string()
+    .min(authAcceptAccountInvitationBodyTokenMin)
+    .max(authAcceptAccountInvitationBodyTokenMax),
+})
+
+export const AuthAcceptAccountInvitation204Response = zod.void()
+
+export const authAcceptAccountInvitation400ResponseStatusMin = 400
+export const authAcceptAccountInvitation400ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation400Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation400ResponseStatusMin)
+    .max(authAcceptAccountInvitation400ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation403ResponseStatusMin = 400
+export const authAcceptAccountInvitation403ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation403Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation403ResponseStatusMin)
+    .max(authAcceptAccountInvitation403ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation404ResponseStatusMin = 400
+export const authAcceptAccountInvitation404ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation404Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation404ResponseStatusMin)
+    .max(authAcceptAccountInvitation404ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation413ResponseStatusMin = 400
+export const authAcceptAccountInvitation413ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation413Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation413ResponseStatusMin)
+    .max(authAcceptAccountInvitation413ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation415ResponseStatusMin = 400
+export const authAcceptAccountInvitation415ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation415Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation415ResponseStatusMin)
+    .max(authAcceptAccountInvitation415ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation422ResponseErrorsItemCodeRegExp =
+  new RegExp('^[a-z][a-z0-9_]*$')
+export const authAcceptAccountInvitation422ResponseErrorsItemPointerRegExp =
+  new RegExp('^(?:|/(?:[^~/]|~0|~1)*)$')
+export const authAcceptAccountInvitation422ResponseStatusMin = 400
+export const authAcceptAccountInvitation422ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation422Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  errors: zod.array(
+    zod.strictObject({
+      code: zod
+        .string()
+        .regex(authAcceptAccountInvitation422ResponseErrorsItemCodeRegExp),
+      detail: zod.string(),
+      pointer: zod
+        .string()
+        .regex(authAcceptAccountInvitation422ResponseErrorsItemPointerRegExp),
+    }),
+  ),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation422ResponseStatusMin)
+    .max(authAcceptAccountInvitation422ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation429ResponseStatusMin = 400
+export const authAcceptAccountInvitation429ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation429Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation429ResponseStatusMin)
+    .max(authAcceptAccountInvitation429ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation500ResponseStatusMin = 400
+export const authAcceptAccountInvitation500ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation500Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation500ResponseStatusMin)
+    .max(authAcceptAccountInvitation500ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authAcceptAccountInvitation503ResponseStatusMin = 400
+export const authAcceptAccountInvitation503ResponseStatusMax = 599
+
+export const AuthAcceptAccountInvitation503Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authAcceptAccountInvitation503ResponseStatusMin)
+    .max(authAcceptAccountInvitation503ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+/**
  * @summary Get the current session-bound CSRF token
  */
 export const authGetCsrfToken200ResponseCsrfTokenMin = 43
@@ -35,8 +396,13 @@ export const AuthGetCsrfToken401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -66,8 +432,13 @@ export const AuthGetCsrfToken403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -97,8 +468,13 @@ export const AuthGetCsrfToken500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -128,8 +504,13 @@ export const AuthGetCsrfToken503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -145,6 +526,679 @@ export const AuthGetCsrfToken503Response = zod.strictObject({
     .number()
     .min(authGetCsrfToken503ResponseStatusMin)
     .max(authGetCsrfToken503ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+/**
+ * @summary Confirm email verification
+ */
+export const authConfirmEmailVerificationBodyTokenMin = 43
+export const authConfirmEmailVerificationBodyTokenMax = 43
+
+export const authConfirmEmailVerificationBodyTokenRegExp = new RegExp(
+  '^[A-Za-z0-9_-]{43}$',
+)
+
+export const AuthConfirmEmailVerificationBody = zod.strictObject({
+  token: zod
+    .string()
+    .min(authConfirmEmailVerificationBodyTokenMin)
+    .max(authConfirmEmailVerificationBodyTokenMax)
+    .regex(authConfirmEmailVerificationBodyTokenRegExp),
+})
+
+export const AuthConfirmEmailVerification204Response = zod.void()
+
+export const authConfirmEmailVerification400ResponseStatusMin = 400
+export const authConfirmEmailVerification400ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification400Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification400ResponseStatusMin)
+    .max(authConfirmEmailVerification400ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification403ResponseStatusMin = 400
+export const authConfirmEmailVerification403ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification403Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification403ResponseStatusMin)
+    .max(authConfirmEmailVerification403ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification404ResponseStatusMin = 400
+export const authConfirmEmailVerification404ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification404Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification404ResponseStatusMin)
+    .max(authConfirmEmailVerification404ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification413ResponseStatusMin = 400
+export const authConfirmEmailVerification413ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification413Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification413ResponseStatusMin)
+    .max(authConfirmEmailVerification413ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification415ResponseStatusMin = 400
+export const authConfirmEmailVerification415ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification415Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification415ResponseStatusMin)
+    .max(authConfirmEmailVerification415ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification422ResponseErrorsItemCodeRegExp =
+  new RegExp('^[a-z][a-z0-9_]*$')
+export const authConfirmEmailVerification422ResponseErrorsItemPointerRegExp =
+  new RegExp('^(?:|/(?:[^~/]|~0|~1)*)$')
+export const authConfirmEmailVerification422ResponseStatusMin = 400
+export const authConfirmEmailVerification422ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification422Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  errors: zod.array(
+    zod.strictObject({
+      code: zod
+        .string()
+        .regex(authConfirmEmailVerification422ResponseErrorsItemCodeRegExp),
+      detail: zod.string(),
+      pointer: zod
+        .string()
+        .regex(authConfirmEmailVerification422ResponseErrorsItemPointerRegExp),
+    }),
+  ),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification422ResponseStatusMin)
+    .max(authConfirmEmailVerification422ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification500ResponseStatusMin = 400
+export const authConfirmEmailVerification500ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification500Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification500ResponseStatusMin)
+    .max(authConfirmEmailVerification500ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmEmailVerification503ResponseStatusMin = 400
+export const authConfirmEmailVerification503ResponseStatusMax = 599
+
+export const AuthConfirmEmailVerification503Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmEmailVerification503ResponseStatusMin)
+    .max(authConfirmEmailVerification503ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+/**
+ * @summary Resend email verification
+ */
+export const authResendEmailVerificationBodyEmailMax = 254
+
+export const AuthResendEmailVerificationBody = zod.strictObject({
+  email: zod.email().max(authResendEmailVerificationBodyEmailMax),
+})
+
+export const AuthResendEmailVerification202Response = zod.unknown()
+
+export const authResendEmailVerification400ResponseStatusMin = 400
+export const authResendEmailVerification400ResponseStatusMax = 599
+
+export const AuthResendEmailVerification400Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification400ResponseStatusMin)
+    .max(authResendEmailVerification400ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification403ResponseStatusMin = 400
+export const authResendEmailVerification403ResponseStatusMax = 599
+
+export const AuthResendEmailVerification403Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification403ResponseStatusMin)
+    .max(authResendEmailVerification403ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification404ResponseStatusMin = 400
+export const authResendEmailVerification404ResponseStatusMax = 599
+
+export const AuthResendEmailVerification404Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification404ResponseStatusMin)
+    .max(authResendEmailVerification404ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification413ResponseStatusMin = 400
+export const authResendEmailVerification413ResponseStatusMax = 599
+
+export const AuthResendEmailVerification413Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification413ResponseStatusMin)
+    .max(authResendEmailVerification413ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification415ResponseStatusMin = 400
+export const authResendEmailVerification415ResponseStatusMax = 599
+
+export const AuthResendEmailVerification415Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification415ResponseStatusMin)
+    .max(authResendEmailVerification415ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification422ResponseErrorsItemCodeRegExp =
+  new RegExp('^[a-z][a-z0-9_]*$')
+export const authResendEmailVerification422ResponseErrorsItemPointerRegExp =
+  new RegExp('^(?:|/(?:[^~/]|~0|~1)*)$')
+export const authResendEmailVerification422ResponseStatusMin = 400
+export const authResendEmailVerification422ResponseStatusMax = 599
+
+export const AuthResendEmailVerification422Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  errors: zod.array(
+    zod.strictObject({
+      code: zod
+        .string()
+        .regex(authResendEmailVerification422ResponseErrorsItemCodeRegExp),
+      detail: zod.string(),
+      pointer: zod
+        .string()
+        .regex(authResendEmailVerification422ResponseErrorsItemPointerRegExp),
+    }),
+  ),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification422ResponseStatusMin)
+    .max(authResendEmailVerification422ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification429ResponseStatusMin = 400
+export const authResendEmailVerification429ResponseStatusMax = 599
+
+export const AuthResendEmailVerification429Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification429ResponseStatusMin)
+    .max(authResendEmailVerification429ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification500ResponseStatusMin = 400
+export const authResendEmailVerification500ResponseStatusMax = 599
+
+export const AuthResendEmailVerification500Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification500ResponseStatusMin)
+    .max(authResendEmailVerification500ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authResendEmailVerification503ResponseStatusMin = 400
+export const authResendEmailVerification503ResponseStatusMax = 599
+
+export const AuthResendEmailVerification503Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authResendEmailVerification503ResponseStatusMin)
+    .max(authResendEmailVerification503ResponseStatusMax),
   title: zod.string(),
   type: zod.url(),
 })
@@ -200,8 +1254,13 @@ export const AuthLogin400Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -231,8 +1290,13 @@ export const AuthLogin401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -262,8 +1326,13 @@ export const AuthLogin403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -293,8 +1362,13 @@ export const AuthLogin413Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -324,8 +1398,13 @@ export const AuthLogin415Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -361,8 +1440,13 @@ export const AuthLogin422Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -399,8 +1483,13 @@ export const AuthLogin429Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -430,8 +1519,13 @@ export const AuthLogin500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -461,8 +1555,13 @@ export const AuthLogin503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -497,8 +1596,13 @@ export const AuthLogout401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -528,8 +1632,13 @@ export const AuthLogout403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -559,8 +1668,13 @@ export const AuthLogout415Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -590,8 +1704,13 @@ export const AuthLogout500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -621,8 +1740,13 @@ export const AuthLogout503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -670,8 +1794,13 @@ export const AuthGetMe401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -701,8 +1830,13 @@ export const AuthGetMe403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -732,8 +1866,13 @@ export const AuthGetMe500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -763,8 +1902,13 @@ export const AuthGetMe503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -821,8 +1965,13 @@ export const AuthChangePassword400Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -852,8 +2001,13 @@ export const AuthChangePassword401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -883,8 +2037,13 @@ export const AuthChangePassword403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -914,8 +2073,13 @@ export const AuthChangePassword409Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -945,8 +2109,13 @@ export const AuthChangePassword413Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -976,8 +2145,13 @@ export const AuthChangePassword415Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1013,8 +2187,13 @@ export const AuthChangePassword422Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1055,8 +2234,13 @@ export const AuthChangePassword500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1086,8 +2270,13 @@ export const AuthChangePassword503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1103,6 +2292,1043 @@ export const AuthChangePassword503Response = zod.strictObject({
     .number()
     .min(authChangePassword503ResponseStatusMin)
     .max(authChangePassword503ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+/**
+ * @summary Confirm a password reset
+ */
+export const authConfirmPasswordResetBodyNewPasswordMin = 12
+export const authConfirmPasswordResetBodyNewPasswordMax = 1024
+
+export const authConfirmPasswordResetBodyTokenMin = 43
+export const authConfirmPasswordResetBodyTokenMax = 43
+
+export const authConfirmPasswordResetBodyTokenRegExp = new RegExp(
+  '^[A-Za-z0-9_-]{43}$',
+)
+
+export const AuthConfirmPasswordResetBody = zod.strictObject({
+  newPassword: zod
+    .string()
+    .min(authConfirmPasswordResetBodyNewPasswordMin)
+    .max(authConfirmPasswordResetBodyNewPasswordMax),
+  token: zod
+    .string()
+    .min(authConfirmPasswordResetBodyTokenMin)
+    .max(authConfirmPasswordResetBodyTokenMax)
+    .regex(authConfirmPasswordResetBodyTokenRegExp),
+})
+
+export const AuthConfirmPasswordReset204Response = zod.void()
+
+export const authConfirmPasswordReset400ResponseStatusMin = 400
+export const authConfirmPasswordReset400ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset400Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset400ResponseStatusMin)
+    .max(authConfirmPasswordReset400ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset403ResponseStatusMin = 400
+export const authConfirmPasswordReset403ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset403Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset403ResponseStatusMin)
+    .max(authConfirmPasswordReset403ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset404ResponseStatusMin = 400
+export const authConfirmPasswordReset404ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset404Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset404ResponseStatusMin)
+    .max(authConfirmPasswordReset404ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset413ResponseStatusMin = 400
+export const authConfirmPasswordReset413ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset413Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset413ResponseStatusMin)
+    .max(authConfirmPasswordReset413ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset415ResponseStatusMin = 400
+export const authConfirmPasswordReset415ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset415Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset415ResponseStatusMin)
+    .max(authConfirmPasswordReset415ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset422ResponseErrorsItemCodeRegExp =
+  new RegExp('^[a-z][a-z0-9_]*$')
+export const authConfirmPasswordReset422ResponseErrorsItemPointerRegExp =
+  new RegExp('^(?:|/(?:[^~/]|~0|~1)*)$')
+export const authConfirmPasswordReset422ResponseStatusMin = 400
+export const authConfirmPasswordReset422ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset422Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  errors: zod.array(
+    zod.strictObject({
+      code: zod
+        .string()
+        .regex(authConfirmPasswordReset422ResponseErrorsItemCodeRegExp),
+      detail: zod.string(),
+      pointer: zod
+        .string()
+        .regex(authConfirmPasswordReset422ResponseErrorsItemPointerRegExp),
+    }),
+  ),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset422ResponseStatusMin)
+    .max(authConfirmPasswordReset422ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset500ResponseStatusMin = 400
+export const authConfirmPasswordReset500ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset500Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset500ResponseStatusMin)
+    .max(authConfirmPasswordReset500ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authConfirmPasswordReset503ResponseStatusMin = 400
+export const authConfirmPasswordReset503ResponseStatusMax = 599
+
+export const AuthConfirmPasswordReset503Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authConfirmPasswordReset503ResponseStatusMin)
+    .max(authConfirmPasswordReset503ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+/**
+ * @summary Request a password reset
+ */
+export const authRequestPasswordResetBodyEmailMax = 254
+
+export const AuthRequestPasswordResetBody = zod.strictObject({
+  email: zod.email().max(authRequestPasswordResetBodyEmailMax),
+})
+
+export const AuthRequestPasswordReset202Response = zod.unknown()
+
+export const authRequestPasswordReset400ResponseStatusMin = 400
+export const authRequestPasswordReset400ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset400Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset400ResponseStatusMin)
+    .max(authRequestPasswordReset400ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset403ResponseStatusMin = 400
+export const authRequestPasswordReset403ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset403Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset403ResponseStatusMin)
+    .max(authRequestPasswordReset403ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset404ResponseStatusMin = 400
+export const authRequestPasswordReset404ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset404Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset404ResponseStatusMin)
+    .max(authRequestPasswordReset404ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset413ResponseStatusMin = 400
+export const authRequestPasswordReset413ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset413Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset413ResponseStatusMin)
+    .max(authRequestPasswordReset413ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset415ResponseStatusMin = 400
+export const authRequestPasswordReset415ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset415Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset415ResponseStatusMin)
+    .max(authRequestPasswordReset415ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset422ResponseErrorsItemCodeRegExp =
+  new RegExp('^[a-z][a-z0-9_]*$')
+export const authRequestPasswordReset422ResponseErrorsItemPointerRegExp =
+  new RegExp('^(?:|/(?:[^~/]|~0|~1)*)$')
+export const authRequestPasswordReset422ResponseStatusMin = 400
+export const authRequestPasswordReset422ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset422Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  errors: zod.array(
+    zod.strictObject({
+      code: zod
+        .string()
+        .regex(authRequestPasswordReset422ResponseErrorsItemCodeRegExp),
+      detail: zod.string(),
+      pointer: zod
+        .string()
+        .regex(authRequestPasswordReset422ResponseErrorsItemPointerRegExp),
+    }),
+  ),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset422ResponseStatusMin)
+    .max(authRequestPasswordReset422ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset429ResponseStatusMin = 400
+export const authRequestPasswordReset429ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset429Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset429ResponseStatusMin)
+    .max(authRequestPasswordReset429ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset500ResponseStatusMin = 400
+export const authRequestPasswordReset500ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset500Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset500ResponseStatusMin)
+    .max(authRequestPasswordReset500ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRequestPasswordReset503ResponseStatusMin = 400
+export const authRequestPasswordReset503ResponseStatusMax = 599
+
+export const AuthRequestPasswordReset503Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRequestPasswordReset503ResponseStatusMin)
+    .max(authRequestPasswordReset503ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+/**
+ * @summary Register a password account
+ */
+export const authRegisterBodyEmailMax = 254
+
+export const authRegisterBodyPasswordMin = 12
+export const authRegisterBodyPasswordMax = 1024
+
+export const AuthRegisterBody = zod.strictObject({
+  email: zod.email().max(authRegisterBodyEmailMax),
+  password: zod
+    .string()
+    .min(authRegisterBodyPasswordMin)
+    .max(authRegisterBodyPasswordMax),
+})
+
+export const AuthRegister202Response = zod.unknown()
+
+export const authRegister400ResponseStatusMin = 400
+export const authRegister400ResponseStatusMax = 599
+
+export const AuthRegister400Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister400ResponseStatusMin)
+    .max(authRegister400ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister403ResponseStatusMin = 400
+export const authRegister403ResponseStatusMax = 599
+
+export const AuthRegister403Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister403ResponseStatusMin)
+    .max(authRegister403ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister404ResponseStatusMin = 400
+export const authRegister404ResponseStatusMax = 599
+
+export const AuthRegister404Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister404ResponseStatusMin)
+    .max(authRegister404ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister413ResponseStatusMin = 400
+export const authRegister413ResponseStatusMax = 599
+
+export const AuthRegister413Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister413ResponseStatusMin)
+    .max(authRegister413ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister415ResponseStatusMin = 400
+export const authRegister415ResponseStatusMax = 599
+
+export const AuthRegister415Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister415ResponseStatusMin)
+    .max(authRegister415ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister422ResponseErrorsItemCodeRegExp = new RegExp(
+  '^[a-z][a-z0-9_]*$',
+)
+export const authRegister422ResponseErrorsItemPointerRegExp = new RegExp(
+  '^(?:|/(?:[^~/]|~0|~1)*)$',
+)
+export const authRegister422ResponseStatusMin = 400
+export const authRegister422ResponseStatusMax = 599
+
+export const AuthRegister422Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  errors: zod.array(
+    zod.strictObject({
+      code: zod.string().regex(authRegister422ResponseErrorsItemCodeRegExp),
+      detail: zod.string(),
+      pointer: zod
+        .string()
+        .regex(authRegister422ResponseErrorsItemPointerRegExp),
+    }),
+  ),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister422ResponseStatusMin)
+    .max(authRegister422ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister429ResponseStatusMin = 400
+export const authRegister429ResponseStatusMax = 599
+
+export const AuthRegister429Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister429ResponseStatusMin)
+    .max(authRegister429ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister500ResponseStatusMin = 400
+export const authRegister500ResponseStatusMax = 599
+
+export const AuthRegister500Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister500ResponseStatusMin)
+    .max(authRegister500ResponseStatusMax),
+  title: zod.string(),
+  type: zod.url(),
+})
+
+export const authRegister503ResponseStatusMin = 400
+export const authRegister503ResponseStatusMax = 599
+
+export const AuthRegister503Response = zod.strictObject({
+  code: zod.enum([
+    'APPROVAL_REQUEST_ALREADY_DECIDED',
+    'APPROVAL_REQUEST_NOT_FOUND',
+    'APPROVAL_SELF_DECISION_FORBIDDEN',
+    'AUTHENTICATION_REQUIRED',
+    'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
+    'CONFLICT',
+    'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
+    'INTERNAL_ERROR',
+    'MALFORMED_REQUEST',
+    'NOT_FOUND',
+    'PAYLOAD_TOO_LARGE',
+    'RATE_LIMIT_EXCEEDED',
+    'UNSUPPORTED_MEDIA_TYPE',
+    'VALIDATION_FAILED',
+  ]),
+  detail: zod.string(),
+  instance: zod.string(),
+  requestId: zod.string(),
+  status: zod
+    .number()
+    .min(authRegister503ResponseStatusMin)
+    .max(authRegister503ResponseStatusMax),
   title: zod.string(),
   type: zod.url(),
 })
@@ -1128,8 +3354,13 @@ export const AuthLogoutAll401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1159,8 +3390,13 @@ export const AuthLogoutAll403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1190,8 +3426,13 @@ export const AuthLogoutAll415Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1221,8 +3462,13 @@ export const AuthLogoutAll500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1252,8 +3498,13 @@ export const AuthLogoutAll503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1314,8 +3565,13 @@ export const AuthListSessions401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1345,8 +3601,13 @@ export const AuthListSessions403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1376,8 +3637,13 @@ export const AuthListSessions500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1407,8 +3673,13 @@ export const AuthListSessions503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1458,8 +3729,13 @@ export const AuthRevokeSession401Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1489,8 +3765,13 @@ export const AuthRevokeSession403Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1520,8 +3801,13 @@ export const AuthRevokeSession415Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1557,8 +3843,13 @@ export const AuthRevokeSession422Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1599,8 +3890,13 @@ export const AuthRevokeSession500Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',
@@ -1630,8 +3926,13 @@ export const AuthRevokeSession503Response = zod.strictObject({
     'APPROVAL_SELF_DECISION_FORBIDDEN',
     'AUTHENTICATION_REQUIRED',
     'AUTHORIZATION_DENIED',
+    'AUTH_ACCOUNT_ETAG_MALFORMED',
+    'AUTH_ACCOUNT_PRECONDITION_FAILED',
+    'AUTH_ACCOUNT_PRECONDITION_REQUIRED',
+    'AUTH_TOKEN_INVALID_OR_EXPIRED',
     'CONFLICT',
     'DEPENDENCY_UNAVAILABLE',
+    'EMAIL_VERIFICATION_REQUIRED',
     'INTERNAL_ERROR',
     'MALFORMED_REQUEST',
     'NOT_FOUND',

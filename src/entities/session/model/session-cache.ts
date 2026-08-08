@@ -21,12 +21,13 @@ export async function refreshCurrentSession(queryClient: QueryClient) {
 }
 
 /**
- * Удаляет сессию и CSRF-токен из клиентского кеша.
+ * Удаляет сессию, CSRF-токен и все данные предыдущего пользователя.
  *
- * @remarks Не выполняет HTTP-запрос. Вызывающий код отвечает за server-side logout,
- * после чего UI больше не может использовать устаревшие данные или CSRF-токен.
+ * @remarks Не выполняет HTTP-запрос. Полностью очищает общий QueryClient, чтобы
+ * queries и mutations одного principal не переживали logout, authentication loss
+ * или последующий вход другого пользователя.
  */
 export function clearCurrentSession(queryClient: QueryClient) {
   clearCsrfToken()
-  queryClient.removeQueries({ queryKey: currentSessionQueryKey() })
+  queryClient.clear()
 }

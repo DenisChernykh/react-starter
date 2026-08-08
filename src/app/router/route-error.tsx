@@ -8,6 +8,7 @@ import {
 
 import { clearCurrentSession } from '@/entities/session'
 import { isProblemCode } from '@/shared/api'
+import { loginPathWithReturnTo } from '@/shared/routes'
 import {
   Alert,
   AlertDescription,
@@ -26,9 +27,7 @@ function AuthenticationRedirect() {
   useEffect(() => {
     clearCurrentSession(queryClient)
     const returnTo = `${location.pathname}${location.search}${location.hash}`
-    navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`, {
-      replace: true,
-    })
+    navigate(loginPathWithReturnTo(returnTo), { replace: true })
   }, [location.hash, location.pathname, location.search, navigate])
 
   return <p>Перенаправляем на страницу входа…</p>

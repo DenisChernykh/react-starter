@@ -28,6 +28,26 @@ export default defineConfig({
           version: 5,
           signal: true,
         },
+        operations: {
+          adminAuthGetAccount: {
+            mutator: {
+              path: './src/shared/api/client/orval-mutator.ts',
+              name: 'apiResponseMutator',
+            },
+          },
+          adminAuthUpdateAccountStatus: {
+            mutator: {
+              path: './src/shared/api/client/orval-mutator.ts',
+              name: 'apiResponseMutator',
+            },
+          },
+          adminAuthReplaceAccountRoles: {
+            mutator: {
+              path: './src/shared/api/client/orval-mutator.ts',
+              name: 'apiResponseMutator',
+            },
+          },
+        },
       },
     },
   },

@@ -1,9 +1,10 @@
 import type { PropsWithChildren, ReactNode } from 'react'
-import { ClipboardCheck, LayoutDashboard } from 'lucide-react'
+import { ClipboardCheck, LayoutDashboard, UsersRound } from 'lucide-react'
 import { NavLink, useMatch } from 'react-router'
 
 import { useCurrentSession } from '@/entities/session'
 import { LogoutButton } from '@/features/auth-logout'
+import { adminAccountsPath } from '@/shared/routes'
 import {
   Container,
   Sidebar,
@@ -20,7 +21,9 @@ import {
 } from '@/shared/ui'
 
 type AppNavigationProps = Readonly<{
+  accountsActive: boolean
   approvalActive: boolean
+  canReadAccounts: boolean
   overviewActive: boolean
 }>
 
@@ -31,7 +34,12 @@ type AppNavigationProps = Readonly<{
  * переход не меняет состояние свёрнутого sidebar. Active state получает от
  * оболочки вместе с header context, чтобы route matching не дублировался.
  */
-function AppNavigation({ approvalActive, overviewActive }: AppNavigationProps) {
+function AppNavigation({
+  accountsActive,
+  approvalActive,
+  canReadAccounts,
+  overviewActive,
+}: AppNavigationProps) {
   const { isMobile, setOpenMobile } = useSidebar()
 
   function closeMobileNavigation() {
@@ -52,6 +60,22 @@ function AppNavigation({ approvalActive, overviewActive }: AppNavigationProps) {
             <span>Обзор</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
+        {canReadAccounts && (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={accountsActive}
+              render={
+                <NavLink
+                  to={adminAccountsPath}
+                  onClick={closeMobileNavigation}
+                />
+              }
+            >
+              <UsersRound aria-hidden="true" />
+              <span>Аккаунты</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )}
         <SidebarMenuItem>
           <SidebarMenuButton
             isActive={approvalActive}
@@ -82,8 +106,14 @@ function AppNavigation({ approvalActive, overviewActive }: AppNavigationProps) {
 export function AppShell({ children }: PropsWithChildren): ReactNode {
   const { data: user } = useCurrentSession()
   const overviewActive = Boolean(useMatch({ path: '/', end: true }))
+  const accountsActive = Boolean(useMatch(`${adminAccountsPath}/*`))
   const approvalActive = Boolean(useMatch('/approval-requests/*'))
-  const routeContext = approvalActive ? 'Согласование' : 'Обзор'
+  const canReadAccounts = user.permissions.includes('auth.accounts.read')
+  const routeContext = accountsActive
+    ? 'Аккаунты'
+    : approvalActive
+      ? 'Согласование'
+      : 'Обзор'
 
   return (
     <SidebarProvider>
@@ -94,6 +124,8 @@ export function AppShell({ children }: PropsWithChildren): ReactNode {
         <AppNavigation
           overviewActive={overviewActive}
           approvalActive={approvalActive}
+          accountsActive={accountsActive}
+          canReadAccounts={canReadAccounts}
         />
         <SidebarFooter>
           <span className="min-w-0 truncate px-2 text-xs text-muted-foreground">

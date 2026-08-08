@@ -22,14 +22,19 @@ import type {
 } from '@tanstack/react-query'
 
 import type {
+  AcceptAccountInvitationRequestDto,
   AuthMutationResponseDto,
   AuthRevokeSessionPathParameters,
   ChangePasswordRequestDto,
+  ConfirmEmailVerificationRequestDto,
+  ConfirmPasswordResetRequestDto,
   CsrfTokenResponseDto,
   CurrentUserResponseDto,
   LoginRequestDto,
   LoginResponseDto,
   ProblemResponseDto,
+  RegisterUserRequestDto,
+  SelfServiceEmailRequestDto,
   SessionsResponseDto,
   ValidationProblemResponseDto,
 } from '../model'
@@ -57,6 +62,101 @@ const withQueryKey = <T extends object, K>(
   return result
 }
 
+/**
+ * @summary Accept an account invitation without creating a session
+ */
+export const authAcceptAccountInvitation = (
+  acceptAccountInvitationRequestDto: BodyType<AcceptAccountInvitationRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/account-invitations/accept`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: acceptAccountInvitationRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthAcceptAccountInvitationMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+    TError,
+    { data: BodyType<AcceptAccountInvitationRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+  TError,
+  { data: BodyType<AcceptAccountInvitationRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authAcceptAccountInvitation']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+    { data: BodyType<AcceptAccountInvitationRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authAcceptAccountInvitation(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthAcceptAccountInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authAcceptAccountInvitation>>
+>
+export type AuthAcceptAccountInvitationMutationBody =
+  BodyType<AcceptAccountInvitationRequestDto>
+export type AuthAcceptAccountInvitationMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Accept an account invitation without creating a session
+ */
+export const useAuthAcceptAccountInvitation = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+      TError,
+      { data: BodyType<AcceptAccountInvitationRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+  TError,
+  { data: BodyType<AcceptAccountInvitationRequestDto> },
+  TContext
+> => {
+  return useMutation(
+    getAuthAcceptAccountInvitationMutationOptions(options),
+    queryClient,
+  )
+}
 /**
  * @summary Get the current session-bound CSRF token
  */
@@ -205,6 +305,196 @@ export function useAuthGetCsrfToken<
   return withQueryKey(query, queryOptions.queryKey)
 }
 
+/**
+ * @summary Confirm email verification
+ */
+export const authConfirmEmailVerification = (
+  confirmEmailVerificationRequestDto: BodyType<ConfirmEmailVerificationRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/email-verification/confirm`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: confirmEmailVerificationRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthConfirmEmailVerificationMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authConfirmEmailVerification>>,
+    TError,
+    { data: BodyType<ConfirmEmailVerificationRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authConfirmEmailVerification>>,
+  TError,
+  { data: BodyType<ConfirmEmailVerificationRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authConfirmEmailVerification']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authConfirmEmailVerification>>,
+    { data: BodyType<ConfirmEmailVerificationRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authConfirmEmailVerification(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthConfirmEmailVerificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authConfirmEmailVerification>>
+>
+export type AuthConfirmEmailVerificationMutationBody =
+  BodyType<ConfirmEmailVerificationRequestDto>
+export type AuthConfirmEmailVerificationMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Confirm email verification
+ */
+export const useAuthConfirmEmailVerification = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authConfirmEmailVerification>>,
+      TError,
+      { data: BodyType<ConfirmEmailVerificationRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authConfirmEmailVerification>>,
+  TError,
+  { data: BodyType<ConfirmEmailVerificationRequestDto> },
+  TContext
+> => {
+  return useMutation(
+    getAuthConfirmEmailVerificationMutationOptions(options),
+    queryClient,
+  )
+}
+/**
+ * @summary Resend email verification
+ */
+export const authResendEmailVerification = (
+  selfServiceEmailRequestDto: BodyType<SelfServiceEmailRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/email-verification/resend`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: selfServiceEmailRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthResendEmailVerificationMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authResendEmailVerification>>,
+    TError,
+    { data: BodyType<SelfServiceEmailRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authResendEmailVerification>>,
+  TError,
+  { data: BodyType<SelfServiceEmailRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authResendEmailVerification']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authResendEmailVerification>>,
+    { data: BodyType<SelfServiceEmailRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authResendEmailVerification(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthResendEmailVerificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authResendEmailVerification>>
+>
+export type AuthResendEmailVerificationMutationBody =
+  BodyType<SelfServiceEmailRequestDto>
+export type AuthResendEmailVerificationMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Resend email verification
+ */
+export const useAuthResendEmailVerification = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authResendEmailVerification>>,
+      TError,
+      { data: BodyType<SelfServiceEmailRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authResendEmailVerification>>,
+  TError,
+  { data: BodyType<SelfServiceEmailRequestDto> },
+  TContext
+> => {
+  return useMutation(
+    getAuthResendEmailVerificationMutationOptions(options),
+    queryClient,
+  )
+}
 /**
  * @summary Create a browser session
  */
@@ -598,6 +888,287 @@ export const useAuthChangePassword = <
   TContext
 > => {
   return useMutation(getAuthChangePasswordMutationOptions(options), queryClient)
+}
+/**
+ * @summary Confirm a password reset
+ */
+export const authConfirmPasswordReset = (
+  confirmPasswordResetRequestDto: BodyType<ConfirmPasswordResetRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/password-reset/confirm`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: confirmPasswordResetRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthConfirmPasswordResetMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authConfirmPasswordReset>>,
+    TError,
+    { data: BodyType<ConfirmPasswordResetRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authConfirmPasswordReset>>,
+  TError,
+  { data: BodyType<ConfirmPasswordResetRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authConfirmPasswordReset']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authConfirmPasswordReset>>,
+    { data: BodyType<ConfirmPasswordResetRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authConfirmPasswordReset(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthConfirmPasswordResetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authConfirmPasswordReset>>
+>
+export type AuthConfirmPasswordResetMutationBody =
+  BodyType<ConfirmPasswordResetRequestDto>
+export type AuthConfirmPasswordResetMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Confirm a password reset
+ */
+export const useAuthConfirmPasswordReset = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authConfirmPasswordReset>>,
+      TError,
+      { data: BodyType<ConfirmPasswordResetRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authConfirmPasswordReset>>,
+  TError,
+  { data: BodyType<ConfirmPasswordResetRequestDto> },
+  TContext
+> => {
+  return useMutation(
+    getAuthConfirmPasswordResetMutationOptions(options),
+    queryClient,
+  )
+}
+/**
+ * @summary Request a password reset
+ */
+export const authRequestPasswordReset = (
+  selfServiceEmailRequestDto: BodyType<SelfServiceEmailRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/password-reset/request`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: selfServiceEmailRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthRequestPasswordResetMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authRequestPasswordReset>>,
+    TError,
+    { data: BodyType<SelfServiceEmailRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authRequestPasswordReset>>,
+  TError,
+  { data: BodyType<SelfServiceEmailRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authRequestPasswordReset']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authRequestPasswordReset>>,
+    { data: BodyType<SelfServiceEmailRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authRequestPasswordReset(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthRequestPasswordResetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authRequestPasswordReset>>
+>
+export type AuthRequestPasswordResetMutationBody =
+  BodyType<SelfServiceEmailRequestDto>
+export type AuthRequestPasswordResetMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Request a password reset
+ */
+export const useAuthRequestPasswordReset = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authRequestPasswordReset>>,
+      TError,
+      { data: BodyType<SelfServiceEmailRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authRequestPasswordReset>>,
+  TError,
+  { data: BodyType<SelfServiceEmailRequestDto> },
+  TContext
+> => {
+  return useMutation(
+    getAuthRequestPasswordResetMutationOptions(options),
+    queryClient,
+  )
+}
+/**
+ * @summary Register a password account
+ */
+export const authRegister = (
+  registerUserRequestDto: BodyType<RegisterUserRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/register`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: registerUserRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthRegisterMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authRegister>>,
+    TError,
+    { data: BodyType<RegisterUserRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authRegister>>,
+  TError,
+  { data: BodyType<RegisterUserRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authRegister']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authRegister>>,
+    { data: BodyType<RegisterUserRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authRegister(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthRegisterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authRegister>>
+>
+export type AuthRegisterMutationBody = BodyType<RegisterUserRequestDto>
+export type AuthRegisterMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Register a password account
+ */
+export const useAuthRegister = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authRegister>>,
+      TError,
+      { data: BodyType<RegisterUserRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authRegister>>,
+  TError,
+  { data: BodyType<RegisterUserRequestDto> },
+  TContext
+> => {
+  return useMutation(getAuthRegisterMutationOptions(options), queryClient)
 }
 /**
  * @summary Revoke every browser session for the current user

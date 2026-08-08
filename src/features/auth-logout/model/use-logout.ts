@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 
 import { clearCurrentSession } from '@/entities/session'
 import { authLogout, isProblemCode } from '@/shared/api'
+import { loginPath } from '@/shared/routes'
 
 /**
  * Выполняет выход, очищает локальную сессию и открывает страницу входа.
@@ -19,12 +20,12 @@ export function useLogout() {
     mutationFn: () => authLogout(),
     onSuccess: () => {
       clearCurrentSession(queryClient)
-      navigate('/login', { replace: true })
+      navigate(loginPath, { replace: true })
     },
     onError: (error) => {
       if (isProblemCode(error, 'AUTHENTICATION_REQUIRED')) {
         clearCurrentSession(queryClient)
-        navigate('/login', { replace: true })
+        navigate(loginPath, { replace: true })
       }
     },
   })

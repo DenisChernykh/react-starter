@@ -5,10 +5,11 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { currentSessionQueryKey } from '@/entities/session'
+import type { CurrentUserResponseDto } from '@/shared/api'
 
 import { AppShell } from './app-shell'
 
-const currentUser = {
+const currentUser: CurrentUserResponseDto = {
   userId: '8dc70a15-d91f-4c67-b5a6-479faa42433c',
   normalizedEmail: 'admin@example.com',
   roleKeys: ['admin'],
@@ -64,14 +65,17 @@ function restoreWindowProperty(
   }
 }
 
-function renderAppShell(initialEntry = '/') {
+function renderAppShell(
+  initialEntry = '/',
+  user: typeof currentUser = currentUser,
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   })
-  queryClient.setQueryData(currentSessionQueryKey(), currentUser)
+  queryClient.setQueryData(currentSessionQueryKey(), user)
   const router = createMemoryRouter(
     [
       {
@@ -123,6 +127,24 @@ describe('AppShell', () => {
 
     expect(screen.getByRole('link', { name: 'Обзор' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Согласование' })).toBeVisible()
+  })
+
+  it('shows account navigation only with the fresh read permission', () => {
+    renderAppShell('/admin/accounts', {
+      ...currentUser,
+      permissions: ['auth.accounts.read'],
+    })
+
+    expect(screen.getByRole('link', { name: 'Аккаунты' })).toBeVisible()
+    expect(getMenuButton('Аккаунты')).toHaveAttribute('data-active')
+  })
+
+  it('hides account navigation without the read permission', () => {
+    renderAppShell('/admin/accounts')
+
+    expect(
+      screen.queryByRole('link', { name: 'Аккаунты' }),
+    ).not.toBeInTheDocument()
   })
 
   it('marks only overview navigation active at the exact root route', () => {
@@ -213,6 +235,27 @@ describe('AppShell', () => {
     )
     await user.click(
       within(navigationSheet).getByRole('link', { name: 'Согласование' }),
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  it('closes mobile navigation after navigating to accounts', async () => {
+    setViewport(390)
+    const user = userEvent.setup()
+    renderAppShell('/', {
+      ...currentUser,
+      permissions: ['auth.accounts.read'],
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Открыть навигацию' }))
+    const navigationSheet = await screen.findByRole('dialog', {
+      name: 'Навигация',
+    })
+    await user.click(
+      within(navigationSheet).getByRole('link', { name: 'Аккаунты' }),
     )
 
     await waitFor(() => {

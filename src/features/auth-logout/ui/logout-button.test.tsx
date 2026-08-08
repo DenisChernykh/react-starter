@@ -6,6 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { currentSessionQueryKey } from '@/entities/session'
+import { adminAccountListQueryKey } from '@/entities/account'
 import { clearCsrfToken, peekCsrfToken, setCsrfToken } from '@/shared/api'
 import { server } from '@/shared/lib/testing'
 
@@ -18,6 +19,11 @@ const currentUser = {
   roleKeys: ['admin'],
   permissions: [],
 }
+const privateAccountListKey = adminAccountListQueryKey({
+  page: 1,
+  pageSize: 25,
+})
+const privateAccountList = { items: [], total: 0 }
 
 function renderLogout() {
   const queryClient = new QueryClient({
@@ -27,6 +33,7 @@ function renderLogout() {
     },
   })
   queryClient.setQueryData(currentSessionQueryKey(), currentUser)
+  queryClient.setQueryData(privateAccountListKey, privateAccountList)
   const router = createMemoryRouter(
     [
       { path: '/', element: <LogoutButton /> },
@@ -65,6 +72,7 @@ describe('LogoutButton', () => {
     expect(csrfHeader).toBe('csrf-before-logout')
     expect(peekCsrfToken()).toBeNull()
     expect(queryClient.getQueryData(currentSessionQueryKey())).toBeUndefined()
+    expect(queryClient.getQueryData(privateAccountListKey)).toBeUndefined()
     expect(router.state.location.pathname).toBe('/login')
   })
 
@@ -97,6 +105,9 @@ describe('LogoutButton', () => {
     ).toBeVisible()
     expect(queryClient.getQueryData(currentSessionQueryKey())).toEqual(
       currentUser,
+    )
+    expect(queryClient.getQueryData(privateAccountListKey)).toEqual(
+      privateAccountList,
     )
     expect(peekCsrfToken()).toBe('csrf-before-logout')
     expect(router.state.location.pathname).toBe('/')

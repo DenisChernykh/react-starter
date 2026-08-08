@@ -29,6 +29,17 @@ const request = {
   createdAt: '2026-07-29T06:15:00.000Z',
   decidedAt: null,
 }
+const account = {
+  createdAt: '2026-08-08T08:00:00.000Z',
+  email: 'member@example.test',
+  emailVerifiedAt: '2026-08-08T08:00:00.000Z',
+  id: requestId,
+  retiredAt: null,
+  revision: 2,
+  roleKeys: [],
+  state: 'active',
+  updatedAt: '2026-08-08T09:00:00.000Z',
+}
 
 const activeRouters = new Set<{ dispose: () => void }>()
 const activeQueryClients = new Set<{ clear: () => void }>()
@@ -108,6 +119,90 @@ afterEach(() => {
 })
 
 describe('application router session guard', () => {
+  it('opens invitation acceptance without session or CSRF requests', async () => {
+    let sessionRequests = 0
+    let csrfRequests = 0
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, () => {
+        sessionRequests += 1
+        return HttpResponse.json(currentUser)
+      }),
+      http.get(`${apiOrigin}/v1/auth/csrf`, () => {
+        csrfRequests += 1
+        return HttpResponse.json({ csrfToken: 'csrf-token' })
+      }),
+    )
+    const { queryClient, router } = await createApplicationRouter(
+      `/auth/accept-invitation#token=${'C'.repeat(43)}`,
+    )
+    renderApplicationRouter(router, queryClient)
+
+    expect(await screen.findByLabelText('Пароль')).toBeVisible()
+    expect(router.state.location.hash).toBe('')
+    expect(sessionRequests).toBe(0)
+    expect(csrfRequests).toBe(0)
+  })
+
+  it('allows token confirmation without a session request', async () => {
+    let sessionRequests = 0
+    let confirmRequests = 0
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, () => {
+        sessionRequests += 1
+        return HttpResponse.json(currentUser)
+      }),
+      http.post(
+        `${apiOrigin}/v1/auth/email-verification/confirm`,
+        async ({ request }) => {
+          confirmRequests += 1
+          expect(await request.json()).toEqual({ token: 'A'.repeat(43) })
+          return new HttpResponse(null, { status: 204 })
+        },
+      ),
+    )
+    const { queryClient, router } = await createApplicationRouter(
+      `/auth/verify-email#token=${'A'.repeat(43)}`,
+    )
+    renderApplicationRouter(router, queryClient)
+
+    expect(await screen.findByText('Email подтверждён')).toBeVisible()
+    expect(sessionRequests).toBe(0)
+    expect(confirmRequests).toBe(1)
+    expect(router.state.location.hash).toBe('')
+  })
+
+  it('opens the reset token route without a session request', async () => {
+    let sessionRequests = 0
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, () => {
+        sessionRequests += 1
+        return HttpResponse.json(currentUser)
+      }),
+    )
+    const { queryClient, router } = await createApplicationRouter(
+      `/auth/reset-password#token=${'B'.repeat(43)}`,
+    )
+    renderApplicationRouter(router, queryClient)
+
+    expect(await screen.findByLabelText('Новый пароль')).toBeVisible()
+    expect(sessionRequests).toBe(0)
+    expect(router.state.location.hash).toBe('')
+  })
+
+  it.each(['/register', '/auth/resend-email-verification', '/forgot-password'])(
+    'redirects an authenticated user away from the form route %s',
+    async (path) => {
+      server.use(
+        http.get(`${apiOrigin}/v1/auth/me`, () =>
+          HttpResponse.json(currentUser),
+        ),
+      )
+      const { router } = await createApplicationRouter(path)
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    },
+  )
+
   it('redirects an anonymous approval deep link with its exact returnTo and no detail GET', async () => {
     let detailsRequests = 0
     server.use(
@@ -129,6 +224,28 @@ describe('application router session guard', () => {
       `?returnTo=%2Fapproval-requests%2F${requestId}`,
     )
     expect(detailsRequests).toBe(0)
+  })
+
+  it('redirects an anonymous account deep link with returnTo before its detail GET', async () => {
+    let detailRequests = 0
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, authenticationRequired),
+      http.get(`${apiOrigin}/v1/admin/auth/accounts/:accountId`, () => {
+        detailRequests += 1
+        return HttpResponse.json(account, {
+          headers: { ETag: `"account-${requestId}-2"` },
+        })
+      }),
+    )
+    const { router } = await createApplicationRouter(
+      `/admin/accounts/${requestId}`,
+    )
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(router.state.location.search).toBe(
+      `?returnTo=%2Fadmin%2Faccounts%2F${requestId}`,
+    )
+    expect(detailRequests).toBe(0)
   })
 
   it('revalidates a cached session before allowing a protected approval route', async () => {
@@ -173,6 +290,34 @@ describe('application router session guard', () => {
       await screen.findByRole('heading', { name: request.title }),
     ).toBeVisible()
     expect(calls.indexOf('session')).toBeLessThan(calls.indexOf('details'))
+  })
+
+  it('loads the session before fetching deep-linked account details', async () => {
+    const calls: string[] = []
+    server.use(
+      http.get(`${apiOrigin}/v1/auth/me`, () => {
+        calls.push('session')
+        return HttpResponse.json({
+          ...currentUser,
+          permissions: ['auth.accounts.read'],
+        })
+      }),
+      http.get(`${apiOrigin}/v1/admin/auth/accounts/:accountId`, () => {
+        calls.push('account')
+        return HttpResponse.json(account, {
+          headers: { ETag: `"account-${requestId}-2"` },
+        })
+      }),
+    )
+    const { queryClient, router } = await createApplicationRouter(
+      `/admin/accounts/${requestId}`,
+    )
+    renderApplicationRouter(router, queryClient)
+
+    expect(
+      await screen.findByRole('heading', { name: account.email }),
+    ).toBeVisible()
+    expect(calls.indexOf('session')).toBeLessThan(calls.indexOf('account'))
   })
 
   it('clears the cached session and CSRF token before redirecting a 401 detail query', async () => {

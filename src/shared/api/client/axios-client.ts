@@ -20,9 +20,15 @@ const clientDefaults = {
 export const API_AXIOS_INSTANCE = axios.create(clientDefaults)
 const csrfAxios = axios.create(clientDefaults)
 
-function isLoginRequest(url: string | undefined) {
-  return url === '/v1/auth/login'
-}
+const csrfExemptPaths = new Set([
+  '/v1/auth/login',
+  '/v1/auth/register',
+  '/v1/auth/email-verification/resend',
+  '/v1/auth/email-verification/confirm',
+  '/v1/auth/password-reset/request',
+  '/v1/auth/password-reset/confirm',
+  '/v1/auth/account-invitations/accept',
+])
 
 async function fetchCsrfToken() {
   const response = await csrfAxios.get<unknown>('/v1/auth/csrf')
@@ -35,7 +41,7 @@ API_AXIOS_INSTANCE.interceptors.request.use(async (config) => {
 
   config.headers.set('Content-Type', 'application/json')
   if (config.data === undefined) config.data = {}
-  if (isLoginRequest(config.url)) return config
+  if (method === 'POST' && csrfExemptPaths.has(config.url ?? '')) return config
 
   config.headers.set('X-CSRF-Token', await getOrFetchCsrfToken(fetchCsrfToken))
   return config
