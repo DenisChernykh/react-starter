@@ -14,7 +14,7 @@ const clientDefaults = {
  * Настроенный Axios-клиент для запросов к API с CSRF-защитой.
  *
  * @remarks Отправляет cookie credentials. Перед небезопасным методом получает
- * CSRF-токен, кроме public auth mutations; отсутствующее тело нормализует до пустого
+ * CSRF-токен, кроме login request; отсутствующее тело нормализует до пустого
  * JSON-объекта, совместимого со строгим серверным JSON-парсером.
  */
 export const API_AXIOS_INSTANCE = axios.create(clientDefaults)

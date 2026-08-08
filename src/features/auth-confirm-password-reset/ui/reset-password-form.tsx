@@ -28,11 +28,6 @@ const resetFormSchema = authConfirmPasswordResetSchema
 const resetTokenSchema = authConfirmPasswordResetSchema.pick({ token: true })
 
 function getResetError(error: unknown) {
-  if (
-    error instanceof ApiProblemError &&
-    error.code === 'AUTH_TOKEN_INVALID_OR_EXPIRED'
-  )
-    return 'Ссылка недействительна или устарела'
   if (error instanceof ApiProblemError && error.code === 'VALIDATION_FAILED')
     return 'Проверьте введённые данные.'
   if (error instanceof ApiProblemError && error.code === 'RATE_LIMIT_EXCEEDED')
@@ -61,6 +56,7 @@ export function ResetPasswordForm() {
   const isSubmitInFlight = useRef(false)
   const [success, setSuccess] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [rejectedToken, setRejectedToken] = useState<string | null>(null)
   const validToken = resetTokenSchema.safeParse({ token }).success
   const {
     formState: { errors },
@@ -75,7 +71,7 @@ export function ResetPasswordForm() {
     },
   })
 
-  if (!validToken) {
+  if (!validToken || rejectedToken === token) {
     return (
       <div className="space-y-4">
         <Alert variant="destructive">
@@ -123,6 +119,13 @@ export function ResetPasswordForm() {
         reset()
         setSuccess(true)
       } catch (error) {
+        if (
+          error instanceof ApiProblemError &&
+          error.code === 'AUTH_TOKEN_INVALID_OR_EXPIRED'
+        ) {
+          setRejectedToken(token)
+          return
+        }
         if (
           error instanceof ApiProblemError &&
           error.code === 'VALIDATION_FAILED'

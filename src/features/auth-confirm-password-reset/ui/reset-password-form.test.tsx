@@ -226,6 +226,12 @@ describe('ResetPasswordForm', () => {
       screen.queryByText('Raw detail must stay hidden'),
     ).not.toBeInTheDocument()
     expect(screen.queryByText('Title must stay hidden')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Запросить новую ссылку' }),
+    ).toHaveAttribute('href', '/forgot-password')
+    expect(
+      screen.queryByRole('button', { name: 'Изменить пароль' }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows only the allowlisted newPassword validation error', async () => {
