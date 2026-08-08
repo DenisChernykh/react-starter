@@ -5,6 +5,9 @@ import { ApprovalRequestCreatePage } from '@/pages/approval-request-create'
 import { ApprovalRequestDetailsPage } from '@/pages/approval-request-details'
 import { ApprovalRequestOpenPage } from '@/pages/approval-request-open'
 import { ApprovalRequestsPage } from '@/pages/approval-requests'
+import { AdminAccountDetailsPage } from '@/pages/admin-account-details'
+import { AdminAccountsPage } from '@/pages/admin-accounts'
+import { AcceptAccountInvitationPage } from '@/pages/accept-account-invitation'
 import { DashboardPage } from '@/pages/dashboard'
 import { ForgotPasswordPage } from '@/pages/forgot-password'
 import { LoginPage } from '@/pages/login'
@@ -15,6 +18,8 @@ import { VerifyEmailPage } from '@/pages/verify-email'
 import { authGetMe } from '@/shared/api'
 import {
   forgotPasswordPath,
+  acceptAccountInvitationPath,
+  adminAccountsPath,
   loginPath,
   registerPath,
   resendEmailVerificationPath,
@@ -58,6 +63,11 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: adminAccountsPath.slice(1), element: <AdminAccountsPage /> },
+      {
+        path: `${adminAccountsPath.slice(1)}/:accountId`,
+        element: <AdminAccountDetailsPage />,
+      },
       {
         path: 'approval-requests',
         element: <ApprovalRequestsPage />,
@@ -108,6 +118,11 @@ export const router = createBrowserRouter([
   {
     path: resetPasswordPath,
     element: <ResetPasswordPage />,
+    errorElement: <RouteError />,
+  },
+  {
+    path: acceptAccountInvitationPath,
+    element: <AcceptAccountInvitationPage />,
     errorElement: <RouteError />,
   },
 ])

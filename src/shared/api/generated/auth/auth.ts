@@ -22,6 +22,7 @@ import type {
 } from '@tanstack/react-query'
 
 import type {
+  AcceptAccountInvitationRequestDto,
   AuthMutationResponseDto,
   AuthRevokeSessionPathParameters,
   ChangePasswordRequestDto,
@@ -61,6 +62,101 @@ const withQueryKey = <T extends object, K>(
   return result
 }
 
+/**
+ * @summary Accept an account invitation without creating a session
+ */
+export const authAcceptAccountInvitation = (
+  acceptAccountInvitationRequestDto: BodyType<AcceptAccountInvitationRequestDto>,
+  options?: SecondParameter<typeof apiMutator>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<void>(
+    {
+      url: `/v1/auth/account-invitations/accept`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data: acceptAccountInvitationRequestDto,
+      signal,
+    },
+    options,
+  )
+}
+
+export const getAuthAcceptAccountInvitationMutationOptions = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+    TError,
+    { data: BodyType<AcceptAccountInvitationRequestDto> },
+    TContext
+  >
+  request?: SecondParameter<typeof apiMutator>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+  TError,
+  { data: BodyType<AcceptAccountInvitationRequestDto> },
+  TContext
+> => {
+  const mutationKey = ['authAcceptAccountInvitation']
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+    { data: BodyType<AcceptAccountInvitationRequestDto> }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return authAcceptAccountInvitation(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AuthAcceptAccountInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof authAcceptAccountInvitation>>
+>
+export type AuthAcceptAccountInvitationMutationBody =
+  BodyType<AcceptAccountInvitationRequestDto>
+export type AuthAcceptAccountInvitationMutationError = ErrorType<
+  ProblemResponseDto | ValidationProblemResponseDto
+>
+
+/**
+ * @summary Accept an account invitation without creating a session
+ */
+export const useAuthAcceptAccountInvitation = <
+  TError = ErrorType<ProblemResponseDto | ValidationProblemResponseDto>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+      TError,
+      { data: BodyType<AcceptAccountInvitationRequestDto> },
+      TContext
+    >
+    request?: SecondParameter<typeof apiMutator>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof authAcceptAccountInvitation>>,
+  TError,
+  { data: BodyType<AcceptAccountInvitationRequestDto> },
+  TContext
+> => {
+  return useMutation(
+    getAuthAcceptAccountInvitationMutationOptions(options),
+    queryClient,
+  )
+}
 /**
  * @summary Get the current session-bound CSRF token
  */

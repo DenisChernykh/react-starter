@@ -17,6 +17,45 @@ const requiredOperations = [
   ],
   ['/v1/auth/password-reset/request', 'post', 'authRequestPasswordReset'],
   ['/v1/auth/password-reset/confirm', 'post', 'authConfirmPasswordReset'],
+  [
+    '/v1/auth/account-invitations/accept',
+    'post',
+    'authAcceptAccountInvitation',
+  ],
+  ['/v1/admin/auth/accounts', 'get', 'adminAuthListAccounts'],
+  ['/v1/admin/auth/accounts/{accountId}', 'get', 'adminAuthGetAccount'],
+  ['/v1/admin/auth/accounts/{accountId}', 'delete', 'adminAuthRetireAccount'],
+  [
+    '/v1/admin/auth/accounts/{accountId}/status',
+    'put',
+    'adminAuthUpdateAccountStatus',
+  ],
+  [
+    '/v1/admin/auth/accounts/{accountId}/roles',
+    'put',
+    'adminAuthReplaceAccountRoles',
+  ],
+  [
+    '/v1/admin/auth/accounts/{accountId}/sessions',
+    'delete',
+    'adminAuthLogoutAll',
+  ],
+  [
+    '/v1/admin/auth/accounts/{accountId}/invitation/resend',
+    'post',
+    'adminAuthResendAccountInvitation',
+  ],
+  [
+    '/v1/admin/auth/accounts/{accountId}/password-reset',
+    'post',
+    'adminAuthRequestPasswordReset',
+  ],
+  ['/v1/admin/auth/roles', 'get', 'adminAuthListRoles'],
+  [
+    '/v1/admin/auth/account-invitations',
+    'post',
+    'adminAuthCreateAccountInvitation',
+  ],
   ['/v1/approval-requests', 'post', 'approvalRequestsCreate'],
   ['/v1/approval-requests/{requestId}', 'get', 'approvalRequestsGet'],
   [

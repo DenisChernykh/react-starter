@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  acceptAccountInvitationPath,
   forgotPasswordPath,
   loginPath,
   loginPathWithReturnTo,
@@ -13,6 +14,7 @@ import {
 describe('auth routes', () => {
   it('exposes canonical public auth paths', () => {
     expect({
+      acceptAccountInvitationPath,
       loginPath,
       registerPath,
       resendEmailVerificationPath,
@@ -20,6 +22,7 @@ describe('auth routes', () => {
       forgotPasswordPath,
       resetPasswordPath,
     }).toEqual({
+      acceptAccountInvitationPath: '/auth/accept-invitation',
       loginPath: '/login',
       registerPath: '/register',
       resendEmailVerificationPath: '/auth/resend-email-verification',

@@ -10,10 +10,12 @@
 В репозитории есть две разные части:
 
 - **foundation** — переиспользуемая инфраструктура приложения;
-- **reference implementation** — `approval-requests`, исполняемый пример
+- **reference implementation** — `approval-requests`, исполняемый business-пример
   подключения бизнес-модуля от OpenAPI до защищённого UI.
 
-При создании нового продукта foundation сохраняется. `approval-requests` также
+При создании нового продукта foundation сохраняется. Account administration
+(`admin/accounts` и public invitation acceptance) относится к generic auth
+foundation, а не к business-domain продукта. `approval-requests` также
 остаётся как наглядный пример, пока пользователь явно не попросит изменить его
 роль. Новый несвязанный capability создаётся отдельным вертикальным slice, а не
 встраивается в approval-модуль.
@@ -122,7 +124,9 @@ createBrowserRouter
 ├── /auth/verify-email
 │   └── VerifyEmailPage (public token route)
 ├── /auth/reset-password
-    └── ResetPasswordPage (public token route)
+│   └── ResetPasswordPage (public token route)
+├── /auth/accept-invitation
+│   └── AcceptAccountInvitationPage (public token route)
 └── /
     ├── createRequireSessionLoader
     ├── ProtectedLayout
@@ -132,7 +136,9 @@ createBrowserRouter
         ├── /approval-requests       ApprovalRequestsPage
         ├── /approval-requests/new   ApprovalRequestCreatePage
         ├── /approval-requests/open  ApprovalRequestOpenPage
-        └── /approval-requests/:id   ApprovalRequestDetailsPage
+        ├── /approval-requests/:id   ApprovalRequestDetailsPage
+        ├── /admin/accounts          AdminAccountsPage
+        └── /admin/accounts/:id      AdminAccountDetailsPage
 ```
 
 `ProtectedLayout` соединяет `AppShell` с React Router `Outlet`. `AppShell`
@@ -160,7 +166,7 @@ Loader не использует cached user как доказательство
 
 Только Problem Details `AUTHENTICATION_REQUIRED` означает anonymous session:
 
-1. session cache и CSRF очищаются;
+1. весь `QueryClient` прежнего principal и CSRF очищаются;
 2. пользователь перенаправляется на `/login`;
 3. исходные pathname, search и hash сохраняются в `returnTo`;
 4. `returnTo` проходит `sanitizeReturnTo` перед обратной навигацией.
@@ -200,10 +206,10 @@ redirect flow.
 Self-service auth form routes (`register`, resend и forgot-password) используют
 тот же redirect-authenticated loader, что и login. Token routes намеренно не
 делают session request: действующий cookie не должен блокировать подтверждение
-email или reset. Ссылки backend передают token только во fragment (`#token=...`).
-`useConsumedFragmentParameter` захватывает его один раз в памяти, затем layout
-effect выполняет replace-навигацию без fragment; token не попадает в query,
-history, storage, RHF или сообщения.
+email, reset или принятие приглашения. Ссылки backend передают token только во
+fragment (`#token=...`). `useConsumedFragmentParameter` захватывает его один раз
+в памяти, затем layout effect выполняет replace-навигацию без fragment; token не
+попадает в URL query, history, storage, RHF, Query MutationCache или сообщения.
 
 ## OpenAPI и генерация Orval
 
@@ -307,10 +313,11 @@ proxy-рует `/v1` и `/health`; эта настройка не попадае
 - всегда отправляет cookie credentials;
 - добавляет `Content-Type: application/json` для unsafe requests;
 - превращает отсутствующее unsafe body в `{}`;
-- не добавляет CSRF к login и пяти public self-service POST:
+- не добавляет CSRF к login и шести public self-service POST:
   `/v1/auth/register`, `/v1/auth/email-verification/resend`,
   `/v1/auth/email-verification/confirm`, `/v1/auth/password-reset/request` и
-  `/v1/auth/password-reset/confirm`;
+  `/v1/auth/password-reset/confirm`,
+  `/v1/auth/account-invitations/accept`;
 - для остальных `POST`, `PUT`, `PATCH`, `DELETE` получает
   `X-CSRF-Token`.
 
@@ -492,8 +499,19 @@ Feature после mutation не создаёт параллельное сос�
 query. Optimistic behavior добавляется только как отдельный подтверждённый
 контракт.
 
-Session cache использует один `currentSessionQueryKey`. Logout,
-authentication loss и redirect очищают его вместе с CSRF.
+Account detail cache хранит единый snapshot `DTO + strong ETag`. Entity
+канонизирует UUID только в query key, сохраняет исходное написание route UUID в
+HTTP path и проверяет, что response DTO и ETag относятся именно к запрошенному
+account. После stale precondition или неоднозначного успешного mutation response
+feature выполняет authoritative detail fetch; concurrent recovery для одного
+account разделяет один in-flight query. Если recovery не удался, stale detail
+удаляется, а list инвалидируется.
+
+Session cache использует `currentSessionQueryKey`, но граница principal шире
+одного ключа. Успешный logout, authentication loss и login redirect очищают
+весь общий `QueryClient` — queries и mutations прежнего пользователя — вместе с
+CSRF. Это не позволяет account, role catalog или другому private cache пережить
+смену principal.
 
 ## Shared UI и TSDoc
 

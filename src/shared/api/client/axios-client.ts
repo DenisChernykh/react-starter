@@ -27,6 +27,7 @@ const csrfExemptPaths = new Set([
   '/v1/auth/email-verification/confirm',
   '/v1/auth/password-reset/request',
   '/v1/auth/password-reset/confirm',
+  '/v1/auth/account-invitations/accept',
 ])
 
 async function fetchCsrfToken() {

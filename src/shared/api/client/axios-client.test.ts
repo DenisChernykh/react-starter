@@ -7,7 +7,7 @@ import { ApiProblemError } from './api-errors'
 import { API_AXIOS_INSTANCE } from './axios-client'
 import { clearCsrfToken } from './csrf-token'
 import { healthReady, healthStartup } from '../generated/health/health'
-import { apiMutator } from './orval-mutator'
+import { apiMutator, apiResponseMutator } from './orval-mutator'
 
 const apiOrigin = window.location.origin
 
@@ -22,6 +22,7 @@ describe('credentialed Axios transport', () => {
       '/v1/auth/email-verification/confirm',
       '/v1/auth/password-reset/request',
       '/v1/auth/password-reset/confirm',
+      '/v1/auth/account-invitations/accept',
     ] as const
     let csrfRequests = 0
     const csrfHeaders: Array<string | null> = []
@@ -257,5 +258,26 @@ describe('credentialed Axios transport', () => {
         { validateStatus: null },
       ),
     ).resolves.toEqual(unavailable)
+  })
+
+  it('returns successful response headers for ETag-backed operations', async () => {
+    server.use(
+      http.get(`${apiOrigin}/v1/admin/auth/accounts/account-1`, () =>
+        HttpResponse.json(
+          { id: 'account-1' },
+          { headers: { ETag: '"account-account-1-2"' } },
+        ),
+      ),
+    )
+
+    await expect(
+      apiResponseMutator<{ id: string }>({
+        url: '/v1/admin/auth/accounts/account-1',
+        method: 'GET',
+      }),
+    ).resolves.toMatchObject({
+      data: { id: 'account-1' },
+      headers: expect.objectContaining({ etag: '"account-account-1-2"' }),
+    })
   })
 })
