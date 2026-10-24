@@ -28,3 +28,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+node_modules/
+.pnpm-store/
+.env.local
+.env.production
+.dev.vars
+!*.example
